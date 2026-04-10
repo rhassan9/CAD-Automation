@@ -151,21 +151,22 @@ class SpliceRenderer:
                 h_cell.font = header_font
                 h_cell.alignment = center_align
                 
+                anchor_row = fallback_start + 1
+                
                 for c in range(1, 7):
                     sheet_1x4.cell(row=header_strip_row, column=c).border = thin_border
                     
                 sub_headers = ['SPLITTER NAME', 'T COUNT', '1X4 PLACEMENT ADDRESS', 'SPLIT', 'SERVICING', 'SERVICING', 'SERVICING', 'SERVICING']
                 for c in range(1, 9):
-                    sheet_1x4.merge_cells(start_row=header_strip_row+1, start_column=c, end_row=header_strip_row+2, end_column=c)
-                    sub = sheet_1x4.cell(row=header_strip_row+1, column=c)
+                    sheet_1x4.merge_cells(start_row=anchor_row+1, start_column=c, end_row=anchor_row+2, end_column=c)
+                    sub = sheet_1x4.cell(row=anchor_row+1, column=c)
                     sub.value = sub_headers[c-1]
                     sub.font = header_font
                     sub.alignment = center_align
-                    sheet_1x4.cell(row=header_strip_row+1, column=c).border = thin_border
-                    sheet_1x4.cell(row=header_strip_row+2, column=c).border = thin_border
+                    sheet_1x4.cell(row=anchor_row+1, column=c).border = thin_border
+                    sheet_1x4.cell(row=anchor_row+2, column=c).border = thin_border
                     
-                search_start_row = header_strip_row + 12
-                anchor_row = fallback_start + 1
+                search_start_row = anchor_row + 12
             
             max_processed_row = max(max_processed_row, anchor_row + 10)
             
