@@ -29,10 +29,8 @@ class ExcelWriter:
         
         calibri_11 = Font(name='Calibri', size=11)
         center_align = Alignment(horizontal='center', vertical='center')
-        thin_side = Side(style='thin')
-        thick_side = Side(style='medium')
-        thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
-        thick_bottom_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thick_side)
+        thick_bottom_border = Border(bottom=Side(style='medium'))
+        no_border = Border()
         
         # Deduplicate houses based on ADDRESS + UNIT
         unique_houses = {}
@@ -48,7 +46,7 @@ class ExcelWriter:
         for idx, data in enumerate(sorted_houses):
             # Check if this row is a multiple of 12 (0-indexed idx)
             is_12th_row = ((idx + 1) % 12 == 0)
-            target_border = thick_bottom_border if is_12th_row else thin_border
+            target_border = thick_bottom_border if is_12th_row else no_border
             
             sheet.cell(row=row, column=1).value = data['ADDRESS']
             sheet.cell(row=row, column=2).value = "FUQUAY-VARINA"
@@ -324,13 +322,7 @@ class ExcelWriter:
             
             # Anchor Row (Zero Span, Starting HH Storage)
             sheet.cell(row=r_idx, column=col_offset).value = 0 # Span 0
-            starting_storage = 50
-            if spans:
-                try:
-                    starting_storage = int(spans[0].get('STARTING_STORAGE', 50))
-                except ValueError:
-                    pass
-            sheet.cell(row=r_idx, column=col_offset + 1).value = starting_storage
+            sheet.cell(row=r_idx, column=col_offset + 1).value = 50 # Default HH storage
             r_idx += 1
             
             # Sequentially layout the actual geometric traces

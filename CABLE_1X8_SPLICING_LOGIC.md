@@ -25,7 +25,7 @@ This sheet acts as the primary index for the 1x8 splitters. Every splitter extra
         *   **Write** data into columns D, E, F, and G-N.
 3.  **Data Integrity**:
     *   If a `placement_no` is found in the DXF but missing in the Template's Column A, it should be flagged as an anomaly.
-    *   **Reverse Top-Down Port Logic**: Ports are not filled sequentially from 1 to 8. Instead, they are assigned in reverse order (from 8 down to 1), based strictly on how many houses are actually being served. Each 1x4 handles up to 4 houses. The script must calculate the required number of 1x4s based on the total house count, assign ports starting from 8 downward, and mark remaining lower ports as SPARE. The DXF's explicit port definitions are computationally overridden.
+    *   **Reverse Top-Down Port Logic**: Ports are strictly loaded starting from Port 8 downward based on total load capacity (N). Ports 1 through (8-N) are forcefully marked as `SPARE`. The DXF's explicit port definitions are computationally overridden.
 
 ## 4. Visual Formatting Requirements
 *   **Text Alignment**: All injected data should be center-aligned to match the engineering standard.
