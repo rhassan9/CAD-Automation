@@ -60,7 +60,7 @@ If the script fails to find a pre-existing Anchor Row for a placement (e.g., if 
     -   **Style**: All-Borders applied to every cell in the frame (A to H).
 
 ## 5. Business Rules
-1. **SPARE Logic (Reverse Top-Down rule)**: Ports are filled from Port 8 downwards based on the house count capacity. Lower-numbered ports (1, 2, etc.) that do not receive a splitter must:
+1. **SPARE Logic (Reverse Top-Down rule)**: Ports are not filled sequentially from 1 to 8. Instead, they are assigned in reverse order (from 8 down to 1), based strictly on how many houses are actually being served. Each 1x4 handles up to 4 houses, so the number of active ports on a 1x8 depends on the total number of houses connected to that placement. The script calculates the required number of 1x4s based on the house count, assigns ports starting from 8 downward, and marks remaining lower ports as SPARE. Lower-numbered ports (1, 2, etc.) that do not receive a splitter must:
    - **Column B**: Detail the standard T-Count range for that port.
    - **Column D**: Show the word "SPARE".
    - **Other Columns**: Must be cleanly wiped.

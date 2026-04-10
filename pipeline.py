@@ -199,24 +199,60 @@ def parse_dxf_data(filepath):
                     'houses': houses
                 })
 
-    # Apply Reverse Top-Down Port Assignment
+    # Apply Reverse Top-Down Port Assignment based strictly on total house count
     t_counts = ["1-4", "5-8", "9-12", "13-16", "17-20", "21-24", "25-28", "29-32"]
     
     for base_name, splitters in temp_1x4_map.items():
         # Sort by original port index to maintain logical sequence (1S, 2S, 3S...)
         splitters.sort(key=lambda x: x['original_port'])
         
+        # Calculate total number of houses connected to this 1x8
+        all_houses = []
+        for sp in splitters:
+            for h in sp['houses']:
+                if h:
+                    all_houses.append(h)
+
+        num_houses = len(all_houses)
+
+        # If there are no houses, we still process the splitters to retain their data
+        # but the rule states it depends on houses. Let's find required 1x4 ports.
+        required_1x4s = math.ceil(num_houses / 4) if num_houses > 0 else len(splitters)
+
+        # Ensure we don't exceed 8 ports
+        required_1x4s = min(required_1x4s, 8)
+
         current_port = 8
-        # Assign mathematically in reverse
-        for sp in reversed(splitters):
+
+        # Re-chunk the houses to align with the new port calculation
+        # Even though we re-chunk the houses, we should preserve the 1x4 names and addresses.
+        # We will iterate `required_1x4s` times.
+        # Since we might have more or fewer splitters in CAD than required_1x4s, we will match them by index.
+        for i in range(required_1x4s):
+            # Take a chunk of 4 houses from all_houses
+            start_idx = i * 4
+            chunk_houses = all_houses[start_idx:start_idx+4]
+            # Pad with empty strings if < 4
+            while len(chunk_houses) < 4:
+                chunk_houses.append('')
+
+            # Grab the corresponding 1x4 splitter data from CAD if available, else use a default or the last one
+            sp_idx = min(i, len(splitters) - 1) if len(splitters) > 0 else 0
+            if len(splitters) > i:
+                sp = splitters[i]
+            elif len(splitters) > 0:
+                sp = splitters[-1] # fallback
+            else:
+                sp = {'1x4_name': '', 'placement_address_1x4': ''}
+
             actual_port = current_port
             
             data['splitters_1x8'][base_name]['ports'][actual_port] = {
-                '1x4_name': sp['1x4_name'], # Retain the original mismatched name per client request
+                '1x4_name': sp.get('1x4_name', ''), # Retain the original mismatched name per client request
                 't_count': t_counts[actual_port - 1],
-                'placement_address_1x4': sp['placement_address_1x4'],
+                'placement_address_1x4': sp.get('placement_address_1x4', ''),
                 'split_reference': f"{base_name}, {actual_port}",
-                'houses': sp['houses']
+                'houses': chunk_houses
             }
             current_port -= 1
                 
