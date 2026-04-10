@@ -1,0 +1,354 @@
+--- PAGE 0 ---
+Technical Operations Manual: OSP Engineering & Construction Standards  
+1. Engineering Deliverables and Project Framework  
+Standard Deliverable Checklist  
+Every project submission shall include the following items in the specified format.  
+Item Name  Format  Quality Expectation  
+Overview Key 
+Map  PDF  D-Sized (36”x48”) providing a holistic view of the project 
+footprint.  
+Construction 
+Prints  PDF  11”x17” at 1:100 scale; Construction Letter Call Outs must 
+be on the Right side.  
+Engineering 
+Source  DWG/SHP  Complete CAD files with all layers and LISP routines applied.  
+Project 
+Workbook  XLSX  Comprehensive 13 -tab dataset consistent with Lumos 
+naming conventions.  
+KMZ Files  KMZ  Geospatial data for the total polygon area AND the Node 
+polygon breakdown.  
+Permit Package  PDF  Applications including directional bore, missile, or plow 
+verbiage for UG permits.  
+Plats  PDF/IMG  Supplied for each polygon found during the engineering 
+stage.  
+The "Workbook" Architecture  
+The Project Workbook is the financial and logical repository of the design. Designers shall 
+populate the following 13 essential tabs:  
+1. Cover Sheet:  Project name, number, date, permits required, and total aerial/buried 
+footage.  
+2. Map Tab:  High-level job overview map.  
+3. Materials:  Standardized list with highlighted part numbers and quantities.  
+4. Labor Sheet:  Input tab for items not auto -populated by the span sheet.  
+5. House Count:  Population of all highlighted fields for serviceability.  
+--- PAGE 1 ---
+6. Cable Sheet:  Sequential list of every cable segment, length, and count.  
+7. Labor Span Sheet:  Calculation of labor costs based on conduit type and footage.  
+8. MEW (Most Efficient Way):  Critical routing optimization documentation.  
+9. Primary Splicing Breakdown:  Granular details for 1x8 hierarchy.  
+10. Secondary Splicing Breakdown:  Granular details for 1x4 hierarchy.  
+11. Final Address List:  Filtered export of serviceable addresses from the House Count.  
+12. Permits & Plats:  Record of approved municipal documents and property 
+boundaries.  
+13. Ring Splicing:  Detailed logic for transport and backbone fiber paths.  
+These high -level deliverables provide the structural data necessary for the drafting 
+standards that dictate field safety and permit approval.  
+--------------------------------------------------------------------------------   
+Workbook and CX/LLD Steps  
+The workbook is the financial "source of truth." Designers shall follow the 13 -step LLD/CX 
+design roadmap to ensure data integrity:  
+1. Count Verification:  Confirm incoming feeder ranges from upstream jobs/cabinets.  
+2. Feeder Allocation:  Mapping fibers to geographic sections (top, bottom, southeast, 
+etc.).  
+3. Splitter Numbering:  Assigning unique IDs (e.g., 152P) to 1x8 hardware.  
+4. Splicing Strategy:  Establishing the "Color for Color" matrix and tube assignments.  
+5. Reserve Designation:  Identifying growth fibers and routing them to handholes.  
+--- PAGE 2 ---
+6. 1x4 Hierarchical Assignment:  Numbering secondary splitters (e.g., 152P -1 through 
+152P-8).
+ 
+ 
+7. Fiber Callout Documentation:  Creating text 
+callouts for every segment on a continuous line.  
+ 
+8. Splice Callout Boxes:  Populating blue boxes with IN/OUT cable names and counts.  
+ 
+9. Cable Sheet Documentation:  Listing every segment, length, and count 
+sequentially.  
+10. Labor Span Population:  Entering span footages and conduit types.  
+11. Material Sheet Completion:  Fiber is auto -populated; splitters and HHs are 
+manually verified.  
+12. House Count Export:  Final serviceability mapping for the IT stack.  
+13. Final QC and Package Release:  Final validation before the "Approved for 
+Construction" release.  
+ 
+2. CAD Drafting and Construction Print Standards  
+
+--- PAGE 3 ---
+Visual clarity and drafting precision directly impact municipal permit approval speed and 
+field safety. Designers shall not deviate from the following standards to ensure all prints are 
+professional, legible, and constructible.  
+Layer and Annotation Rigor  
+• Text Mandate:  All text—including street names, callouts, and addresses —shall be 
+in ALL CAPS . 
+• Abbreviations:  Street abbreviations shall not include periods (e.g., use "DR" not 
+"DR.").  
+• Street Names:  Must be CENTERED  between Edge of Pavement (EOP) lines and 
+aligned parallel to the EOP.  
+• Background Masks:  Mandated for all addresses, footage labels, and sheet titles to 
+ensure legibility.  
+• Linetype Synchronization:  The font size for Edge of Pavement (EOP) and Right of 
+Way (ROW) linetypes must be identical.  
+• Linework Integrity:  Parcel lines shall be trimmed to the ROW; EOP corners must be 
+filleted; utility lines shall be turned off on construction prints.  
+• Pole Attachments:  All poles must show the owner, Pole ID, Lat/Long, and Lumos 
+approval status.  
+The Visual Hierarchy (V5 Color Standards)  
+Designers shall utilize the V5 standard color hierarchy. This hierarchy supersedes all prior 
+versions (Ver -9). 
+Element Category  Color / 
+Symbol  Application Rule  
+Splice Callouts  Blue  Standard blue box callouts at all cable junctions.  
+Splitter Callouts  Red  Denotes 1x8 or 1x4 blocks; IN/OUT counts inside must 
+be Blue.  
+Terminal Boundary  Green  Polygons identifying the 1x4 service area.  
+Fiber 
+(Underground)  Red  Continuous lines representing the buried FOC path.  
+--- PAGE 4 ---
+Fiber (Aerial)  Blue  Represents strand -mounted fiber.  
+Fiber (Strand)  Brown  Represents the supporting strand infrastructure.  
+Conduit  Black 
+Dashed  New conduit routing (1.25" or 2" sizes).  
+Existing Facilities  Black  Previously installed infrastructure to remain.  
+Viewport and Scaling Protocol  
+Consistency is mandatory. Designers shall use the ALIGNSPACE  command to ensure the 
+scale is identical across all sheets.  
+• Matchlines:  Must align perfectly with the viewport border as a continuous line with 
+no redundant data overlap.  
+• Centering:  Matchlines shall be CENTERED on the street  rather than on conduit 
+runs to maintain geographical context.  
+• See Sheet/Match Sheet:  All cables leaving a page must have verified pairs.  
+CAD Best Practices & LISP Integration  
+Before submission, the following technical steps are mandatory:  
+• AutoRotate180:  Must be run on all handholes, footages, and road names to ensure 
+they are oriented right -side up.  
+• Auto Dimensions:  The LISP is a starting point; designers shall manually delete 
+incorrect dimensions and ensure all tic marks snap precisely to linework (EOP, 
+ROW, or Conduit).  
+• SAVETIME Configuration:  The SAVETIME  interval shall be set to 1 minute . 
+--------------------------------------------------------------------------------   
+3. Civil Infrastructure and Design Constraints  
+Inefficient infrastructure placement leads to massive budget overruns. Every placement 
+must be evaluated for financial and construction logic.  
+Handhole and Flower Pot Specifications  
+Hardware must be sized appropriately for its equipment load.  
+--- PAGE 5 ---
+HH 
+Size  Use 
+Case  Maximum Cable 
+Capacity  Hardware/Notes  
+13x24  SPLT  1 Distro Cable (In/Out)  Fits (1) G5 splice case.  
+17x30  SM 2 Distro Cables  Fits (1) G5 case; for small splices/MSTs.  
+24x36  MED  3 Fiber Cables  Fits Tyco 450D; 144 and 288 LCP placement.  
+30x48  LHH  4 Fiber Cables  432 LCP placement only  or feeder ring 
+routes.  
+Conduit Placement and Road Bore Logic  
+• The Perpendicular Mandate:  All road bores shall be drawn at 90-degree angles . 
+Angled bores are strictly prohibited.  
+• Pull Box Spacing:  Maximum footage between pull boxes is 650 feet. 
+• Drop Capacity:  Maximum of 6 drops per conduit run. If exceeded, a second conduit 
+is required.  
+• Exclusion Zones:  Infrastructure shall never be placed in brick pavers or "Downtown 
+Business Districts" where drops would require destroying concrete or blowing out 
+the front of businesses.  
+• Property Lines:  Handholes and flower pots shall be placed on property lines to 
+minimize parcel obstruction.  
+Slack and Maintenance Loop Standards  
+• Splitter HH:  15-foot loop per splitter (Cyan).  
+• HH Splice Locations:  50-foot loop at each 3 -way splice location (Cyan).  
+• Aerial Coils:  200-foot storage loops every 1,500 –2,000 feet minimum.  
+• Transitions:  100-foot aerial coil at riser poles (aerial to buried).  
+• Fiber Markers:  Placed every 500 feet following the maintenance slack guideline, 
+not at every handhole.  
+--------------------------------------------------------------------------------   
+4. Fiber Architecture and Splicing Standards  
+--- PAGE 6 ---
+The "Path of Light" philosophy dictates that "Fixed Position" logic is non -negotiable. Shifting 
+counts to fill gaps is prohibited.  
+The Splitter Hierarchy and Naming  
+A single XGSPON port services 32 customers.  
+• Naming Syntax:  [NODE]_[FEEDER]_[LEVEL][PORT]_[CITY CLLI][STATE]  (e.g., 
+OLT11_3P_7S_FTMYFL ). 
+• IT Stack Requirements:  The 4-character City CLLI and 2 -character State identifier 
+are mandatory for database synchronization.  
+• Ring Fiber Logic:  Named using the 12 IN / 12 OUT  convention (e.g., LE1_OLT07A: 1 -
+12). 
+The "No Indexing" and "XD" Mandate  
+Fibers shall remain in the exact color position they occupied prior to the splice.  
+• Rule: Utilize the highest non -split feeder counts first  (e.g., fiber 176 used before 
+fiber 1).  
+• XD Notation:  Utilized counts are replaced with "XD" dead count notations to 
+maintain strand alignment.  
+• Color-for-Color Exception:  If a new cable is smaller than the incoming count (e.g., 
+placing fiber 49 into a 48 -count cable), fiber 49 (a "blue" sequence fiber) shall be 
+placed in the Blue position (Position 1)  to maintain color alignment.  
+Feeder and Distribution Separation  
+• 80% Capacity Rule:  Upsize cable once 80% capacity is reached.  
+• Separation:  Distribution fibers must come after non-split feeders in the tube.  
+• Exception:  Front-loading distribution fibers is only permitted if utilizing the very last 
+non-split feeder fiber  in the cable.  
+ 
+Fiber Callouts  
+A. Introduction to Fiber Documentation Standards  
+Core Objectives  The Lumos drafting standard is designed to achieve three non -negotiable 
+goals:  
+--- PAGE 7 ---
+• Accuracy in Strand Alignment:  Every fiber must be accounted for and positioned 
+precisely within its specific tube or ribbon.  
+• Adherence to "Color for Color" Logic:  Maintaining a direct relationship between a 
+fiber’s assignment number and its physical color position to ensure field 
+technicians can identify strands without guesswork.  
+• Hierarchical Differentiation:  Establishing a clear visual and nomenclatural 
+distinction between feeder fibers (transporting light from the cabinet) and 
+distribution fibers (serving the individual address).  
+B. The Anatomy of a Lumos Fiber Callout  
+The structural formatting of a Lumos fiber callout is a technical requirement, not a stylistic 
+preference. Technicians in the field rely on the absolute consistency of these annotations 
+to perform complex splices under varied conditions.  
+Standard Naming Convention  
+Designers must identify every cable segment using the granular hierarchy established in 
+our engineering deliverables. The following table deconstructs a standard cable string: 
+HSP.01.03.14 48  
+Element  Description  Example  
+Market  Geographic market identifier.  HSP  
+Node  The specific OLT Node servicing the area.  01 
+Project  The assigned project number.  03 
+Segment  The specific cable segment ID.  14 
+Total Count  The physical capacity of the cable.  48 
+Punctuation and Mandatory Data Rules  
+• Punctuation Requirements:  Designers MUST use commas to separate specific 
+fiber blocks and semicolons to terminate cable -specific data strings (e.g., XD, 1-
+12;). 
+• The "Same Line" Rule:  To ensure data integrity, the Cable Name and the first 
+associated fiber count  must reside on the same line.  
+--- PAGE 8 ---
+• The 20% Spare Mandate:  Every cable must represent at least 20% spare capacity  
+utilizing the "XD" count. This ensures future -proofing and limits the need for 
+disruptive future overlays.  
+C. Hierarchical Naming and Splitter Identification  
+Hierarchical naming is the only way to maintain the "Path of Light" traceability from the 
+Optical Line Terminal (OLT) to the customer’s residence. This logic allows a maintenance 
+technician to trace a failure at a specific address back through the secondar y and primary 
+splitters to the exact feeder fiber at the cabinet.  
+Deconstructing the Naming Logic  
+Consider the secondary splitter string: OLT11_3P_7S_FTMYFL, 25 -28 
+1. Node (OLT11):  The specific field node or CO site.  
+2. Feeder Fiber Assignment (3):  The specific feeder fiber (port) arriving from the 
+cabinet.  
+3. Splitter Type (P/S):  Identifies the hierarchy level (P = Primary 1x8, S = Secondary 
+1x4).  
+4. Port Assignment (7):  The specific port off the primary splitter feeding this 
+secondary unit.  
+5. CLLI Code/State (FTMYFL):  The 4-character city CLLI and 2 -character state 
+identifier.  
+6. Output Range (25 -28): The distribution fibers serving the individual addresses.  
+D. The "No Indexing" Mandate and the "XD" Notation  
+Lumos strictly enforces a "No Indexing"  policy. Fiber counts must never be moved up a 
+tube or ribbon at a splice point to fill empty positions. Indexing leads to "wasteful splicing" 
+and breaks the color -coding logic required for field operations.  (note exception below)  
+The Role of "XD" Notation  
+"XD" notation is the placeholder for spare, reserved, or utilized counts. Its purpose is to 
+maintain fixed-position fiber indexing . When a fiber is utilized at a splitter, it is replaced 
+with "XD" in the outgoing callout to keep the remaining fibers in their original physical color 
+positions.  
+Scenario Comparison: "Color for Color" in Practice  
+--- PAGE 9 ---
+• Incoming Callout:   
+HSP.01.03.14 48  
+ XD, 1-2;  
+OLT01_103P_FQVRNC, 3 -48; 
+• Outgoing Callout (Utilizing 3 -7): 
+ HSP.01.03.14 48  
+XD, 1-7; 
+ OLT01_103P_FQVRNC, 8 -48; 
+The Color Sequence:  To maintain "Color for Color" alignment, designers must adhere to 
+the standard 12 -color sequence: 1-Blue, 2-Orange, 3 -Green, 4 -Brown, 5 -Slate, 6-White, 
+7-Red, 8-Black, 9-Yellow, 10 -Violet, 11 -Pink, 12-Aqua.  
+E. Splicing Order of Operations and Technical Exceptions  
+Standardized sequencing is required for constructible prints. Lumos mandates that Non-
+split Feeder fibers must be placed before Distribution (Split) fibers  in any callout.  
+The "Color for Color" Exception (Wrap -around Logic)  
+The "No Indexing" rule is only superseded when a new cable is physically too small to hold 
+original assignment numbers. For example, if fiber 49 is being spliced into a 48 -count 
+cable, the physical position 49 does not exist. Because fiber 49 is inherently  the first fiber of 
+the next 48 -count set (a "blue" fiber), it must be placed in the first available blue position 
+(Position 1) . This wrap -around is triggered solely because the physical position cannot be 
+utilized.  
+The Front -Loading Exception and Cable Sizing  
+Distribution fibers may only be front-loaded (placed at the start of a cable) if the very last 
+non-split feeder fiber  in that cable has been utilized.  
+F. Visual Implementation: Splice Boxes and Drafting Standards  
+Splice Point (SP) boxes are the visual instructions for construction crews. They must be 
+drafted with absolute clarity.  
+"IN" vs. "OUT" Structure and Summation  
+• IN: Identifies incoming cable names, counts, and assignments.  
+--- PAGE 10 ---
+• OUT: Identifies all outgoing cables and splitter tails.  
+• Mandatory Calculation:  Designers MUST verify that the sum of outgoing fibers 
+accounts for all incoming strands , including XD spares.  
+CAD Drafting Checklist  
+• Orientation:  All callouts MUST be perfectly horizontal.  
+• Background Masks:  Mandatory for all text to ensure legibility over map features.  
+• Leaders:  Must snap to the closest corner of the splitter or HH block.  
+• Case: ALL CAPS for all text.  
+• Indentation Rule:  If a data string for a single cable overflows to a second line, the 
+"subset child line" must be indented to show it belongs to the cable listed above.  
+• Footage Notation:  Use H-B (Handhole to Bend), B-F (Bore Pit to Flowerpot), or B-H 
+(Bore Pit to Handhole). The "B" notation for a Bore Pit is critical for calculating labor 
+costs in the Labor Span Sheet.  
+G. Quality Control: Identifying and Correcting Common Callout Errors  
+QC is the final safeguard against project failure. Because feeder counts propagate 
+downstream, a single error in Sheet 1 can necessitate a total redesign of the entire job.  
+Common Errors and Solutions  
+Error  Correction  
+"XD" used as 
+"Available" (A -count)  The "A-count" was discontinued because it led to "unnecessary 
+splicing." Use "XD" exclusively to maintain fixed positions.  
+Overlapping Text  Apply background masks; ensure no overlap with road names, 
+dimensions, or parcel lines.  
+Misspelled Street 
+Names  Manually entered names are frequent failures. Cross -check with 
+EOP labels and Google Earth.  
+Indexing After Splitter  (Almost) Never move counts up. Replace utilized counts with "XD" 
+and maintain original color position.  
+Incorrect Footage 
+Abbreviation  Ensure "B" is used for any span involving a bore pit to ensure 
+accurate labor billing.  
+--- PAGE 11 ---
+The application of these standards ensures the long -term integrity of the Lumos fiber 
+network. By following these prescriptive rules, we provide a professional, constructible 
+deliverable that minimizes waste and maximizes network reliability.  
+--------------------------------------------------------------------------------   
+Conduit Footage Abbreviations  
+Abbreviation  Meaning  Billing/Labor Impact  
+H-B / F-B HH/FP to Bend  Parallel conduit; billed as one unit with main run.  
+B-F Bend to FP  Bore shot ; isolated per -foot labor charge.  
+H-F / F-F Origin to Destination  Total footage for combined bore and parallel segments.  
+--------------------------------------------------------------------------------   
+5
+. Quality Control and Submission Protocol  
+The professional appearance of a print is a proxy for technical accuracy. Designers shall 
+perform a self-17-point QC review sequence  before submission : 
+1. Static Viewport Check:  Scroll all pages; no entities shall shift.  
+2. Title Page:  Verify Lat/Long (second value must be negative), Legend, and Revision 
+Table.  
+3. Sheet Index:  Verify order and ensure Wipeout frames are turned OFF . 
+4. Mini Map:  Consistency check across all sheets.  
+5. Matchlines:  Accuracy, alignment, and centering on streets.  
+6. Street Names:  Correct spelling, centering, and no periods  in abbreviations.  
+
+--- PAGE 12 ---
+7. Linework:  Verify EOP corners are filleted and ROW is trimmed.  
+8. Dimensions:  Parallelism and snap accuracy; no overlaps.  
+9. Addresses:  Readability, background masks, and no overlap.  
+10. Blocks: All blocks brought to front and oriented correctly.  
+11. Callouts:  Horizontal alignment and correct address/street spelling.  
+12. Footages:  Correct abbreviations (H -B, B-F) and background masks.  
+13. TO CO Arrows:  Required on every page containing FOC.  
+14. North Arrow:  Required on every print sheet.  
+15. VL/C Notations:  "VL" for vacant lots and "C" for commercial properties.  
+16. Hatching:  Verify Gray (NN) or Yellow (Private) hatches; no hatching on public roads.  
+17. Design Efficiency:  Verify maximum 6 drops per run and no T -connections in 
+conduit.  
+The designer holds final responsibility for providing an efficient, professional, and 
+constructible design. There is no excuse for non -compliance.  
+ 
