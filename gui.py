@@ -120,6 +120,7 @@ class AppUI(ctk.CTk):
             writer.populate_splices(data['splitters_1x8'])
             writer.populate_1x4_splits(data['splitters_1x8'])
             writer.populate_cable_sheet(data)
+            writer.populate_labor_span(data.get('labor_spans', []))
             writer.save()
             
             self.after(0, lambda: self.status_var.set("Status: Success!"))

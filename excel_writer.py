@@ -376,6 +376,101 @@ class ExcelWriter:
                 
                 r_idx += 1
 
+    def populate_labor_span(self, labor_spans):
+        print("Populating Labor Span Sheet dynamically...")
+        if 'LABOR SPAN SHEET' not in self.wb.sheetnames:
+            print("WARNING: LABOR SPAN SHEET not found in workbook.")
+            return
+            
+        sheet = self.wb['LABOR SPAN SHEET']
+        from openpyxl.styles import Alignment
+        center_align = Alignment(horizontal='center', vertical='center')
+        
+        # Sort data sequentially by SP number and then alphabetical ITEM#
+        # If SP is missing or completely unparseable to integer, set to 999 to throw it to the bottom
+        def parse_sp(s):
+            try:
+                return int(str(s).strip())
+            except ValueError:
+                return 999
+                
+        sorted_labor = sorted(labor_spans, key=lambda x: (parse_sp(x.get('SP', 999)), str(x.get('ITEM#', ''))))
+        
+        r_idx = 7
+        for span in sorted_labor:
+            sp_val = str(span.get('SP', '')).strip()
+            item_val = str(span.get('ITEM#', '')).strip()
+            length_val = str(span.get('LENGTH', '0')).strip()
+            cond_sz = str(span.get('COND_SZ', '')).strip()
+            cond_qty_str = str(span.get('COND_QTY', '0')).strip()
+            drop_flg = str(span.get('DROP_FLG', '')).strip()
+            
+            # Fiber Counts
+            f48 = str(span.get('F48', '')).strip()
+            f96 = str(span.get('F96', '')).strip()
+            f144 = str(span.get('F144', '')).strip()
+            f288 = str(span.get('F288', '')).strip()
+            f432 = str(span.get('F432', '')).strip()
+            
+            # Calculate A: JOB PRINT PAGE #
+            col_a = f"SP-{sp_val}" if sp_val else ""
+            
+            # Calculate B: Construction Note Letter Job Print
+            col_b = item_val
+            
+            # Calculate C: SPAN FOOTAGE
+            try:
+                col_c = int(length_val)
+            except ValueError:
+                col_c = 0
+                
+            # Calculate D: NON-STANDARD CONDUIT SIZE
+            col_d = cond_sz if cond_sz in ['2', '4', '2"', '4"'] else ""
+            
+            # Calculate E: IS THIS A PARALLELING DROP CONDUIT?
+            col_e = "yes" if drop_flg and drop_flg != '0' else "no"
+            
+            # Calculate F: CABLES THIS SPAN
+            cables = 0
+            for f_val in [f48, f96, f144, f288, f432]:
+                if f_val and f_val != '0':
+                    cables += 1
+            col_f = cables
+            
+            # Calculate G, H, I: CONDUIT CAPACITIES
+            try:
+                cond_qty = int(cond_qty_str)
+            except ValueError:
+                cond_qty = 0
+                
+            col_g = min(cond_qty, 2)
+            col_h = max(0, min(cond_qty - 2, 2))
+            col_i = max(0, min(cond_qty - 4, 1))
+            
+            # Map values to columns A through O (1 to 15)
+            # A=1, B=2, C=3, D=4, E=5, F=6, G=7, H=8, I=9, J=10, K=11, L=12, M=13, N=14, O=15
+            sheet.cell(row=r_idx, column=1).value = col_a
+            sheet.cell(row=r_idx, column=2).value = col_b
+            sheet.cell(row=r_idx, column=3).value = col_c
+            sheet.cell(row=r_idx, column=4).value = col_d
+            sheet.cell(row=r_idx, column=5).value = col_e
+            sheet.cell(row=r_idx, column=6).value = col_f
+            sheet.cell(row=r_idx, column=7).value = col_g
+            sheet.cell(row=r_idx, column=8).value = col_h
+            sheet.cell(row=r_idx, column=9).value = col_i
+            
+            # J through O are left blank as per client decision (pending Aerial automation logic later)
+            for c in range(10, 16):
+                sheet.cell(row=r_idx, column=c).value = ""
+                
+            # Apply styling
+            for col in range(1, 16):
+                cell = sheet.cell(row=r_idx, column=col)
+                if type(cell).__name__ != 'MergedCell':
+                    cell.alignment = center_align
+            
+            r_idx += 1
+
     def save(self):
         print(f"Saving changes to {self.output_path}...")
         self.wb.save(self.output_path)
@@ -389,5 +484,6 @@ if __name__ == '__main__':
     writer.populate_house_count(extracted['house_count'])
     writer.populate_splices(extracted['splitters_1x8'])
     writer.populate_1x4_splits(extracted['splitters_1x8'])
-    writer.populate_cable_sheet(extracted['cable_spans'])
+    writer.populate_cable_sheet(extracted)
+    writer.populate_labor_span(extracted.get('labor_spans', []))
     writer.save()
