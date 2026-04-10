@@ -18,6 +18,7 @@ def parse_dxf_data(filepath):
     
     temp_cable_blocks = []
     callouts = []
+    splitter_locations = []
     
     # Pass 1: Collect entities
     for entity in msp.query('INSERT'):
@@ -30,7 +31,6 @@ def parse_dxf_data(filepath):
         # Labor Spans
         if 'MODELITEM' in name:
             data['labor_spans'].append(attribs)
-            continue
             
         fiber_co = attribs.get('FIBER_CO', '').strip().upper()
         splitter_tag = attribs.get('SPLITTER', '').strip().upper()
@@ -47,6 +47,7 @@ def parse_dxf_data(filepath):
             
         # Parse 1x8 Primary Splitters
         if '1X8 SPLITTER' in splitter_tag:
+            splitter_locations.append((entity.dxf.insert.x, entity.dxf.insert.y))
             parts = splitter_tag.split('1X8 SPLITTER ')
             if len(parts) > 1:
                 base_name = parts[1].strip()
@@ -65,6 +66,7 @@ def parse_dxf_data(filepath):
                 
         # Parse 1x4 Secondary Splitters
         elif '1X4 SPLITTER' in fiber_co:
+            splitter_locations.append((entity.dxf.insert.x, entity.dxf.insert.y))
             splitters_1x4_raw.append(attribs)
             
         # Collect items for Cable Sheet temporarily
@@ -135,6 +137,15 @@ def parse_dxf_data(filepath):
         
         spans[0]['START_ADDRESS'] = get_nearest_address(start_x, start_y)
         spans[0]['END_ADDRESS'] = get_nearest_address(end_x, end_y)
+
+        # Determine if there is a splitter nearby (within e.g. 5.0 units) to set storage to 15 vs 50
+        is_splitter_near = False
+        for sx, sy in splitter_locations:
+            if math.hypot(sx - start_x, sy - start_y) < 10.0:  # use a threshold of 10.0 units
+                is_splitter_near = True
+                break
+
+        spans[0]['STARTING_STORAGE'] = '15' if is_splitter_near else '50'
 
     print("Mapping True Positions...")
     temp_1x4_map = {}
