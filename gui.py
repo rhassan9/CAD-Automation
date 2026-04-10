@@ -119,7 +119,7 @@ class AppUI(ctk.CTk):
             writer.populate_house_count(data['house_count'])
             writer.populate_splices(data['splitters_1x8'])
             writer.populate_1x4_splits(data['splitters_1x8'])
-            writer.populate_cable_sheet(data.get('cable_spans', {}))
+            writer.populate_cable_sheet(data)
             writer.save()
             
             self.after(0, lambda: self.status_var.set("Status: Success!"))

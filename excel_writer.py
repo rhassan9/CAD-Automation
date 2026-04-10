@@ -29,8 +29,13 @@ class ExcelWriter:
         
         calibri_11 = Font(name='Calibri', size=11)
         center_align = Alignment(horizontal='center', vertical='center')
-        thick_bottom_border = Border(bottom=Side(style='medium'))
-        no_border = Border()
+        
+        # House Count Formatting Logic
+        thin_side = Side(style='thin', color='000000')
+        thick_side = Side(style='medium', color='000000')
+        
+        standard_border = Border(top=thin_side, bottom=thin_side, left=thin_side, right=thin_side)
+        thick_bottom_border = Border(top=thin_side, bottom=thick_side, left=thin_side, right=thin_side)
         
         # Deduplicate houses based on ADDRESS + UNIT
         unique_houses = {}
@@ -46,7 +51,7 @@ class ExcelWriter:
         for idx, data in enumerate(sorted_houses):
             # Check if this row is a multiple of 12 (0-indexed idx)
             is_12th_row = ((idx + 1) % 12 == 0)
-            target_border = thick_bottom_border if is_12th_row else no_border
+            target_border = thick_bottom_border if is_12th_row else standard_border
             
             sheet.cell(row=row, column=1).value = data['ADDRESS']
             sheet.cell(row=row, column=2).value = "FUQUAY-VARINA"
@@ -280,7 +285,7 @@ class ExcelWriter:
                     sheet_1x4.cell(row=row_offset, column=7).value = None
                     sheet_1x4.cell(row=row_offset, column=8).value = None
 
-    def populate_cable_sheet(self, cable_spans):
+    def populate_cable_sheet(self, data):
         print("Populating Cable Sheet dynamically...")
         if 'CABLE SHEET' not in self.wb.sheetnames:
             print("WARNING: CABLE SHEET not found in workbook.")
@@ -288,10 +293,19 @@ class ExcelWriter:
             
         sheet = self.wb['CABLE SHEET']
         from openpyxl.styles import Alignment
+        import math
         center_align = Alignment(horizontal='center', vertical='center')
         
+        cable_spans = data.get('cable_spans', {})
         # Sort segments alphabetically represented by integer
         sorted_segs = sorted(cable_spans.keys())
+        
+        # Build flat list of all Splitter coordinates
+        splitters = []
+        for v in data.get('splitters_1x8', {}).values():
+            splitters.append((v.get('x', 0), v.get('y', 0)))
+        for v in data.get('splitters_1x4', []):
+            splitters.append((v.get('X', 0), v.get('Y', 0)))
         
         for seg_idx, seg_num in enumerate(sorted_segs):
             if seg_idx >= 25:
@@ -320,9 +334,18 @@ class ExcelWriter:
             # Data Layout Logic
             r_idx = 15
             
+            # Formulate handhole storage dynamically using spatial Splitter proximity logic
+            hh_store = 50
+            if spans:
+                bx, by = spans[0].get('X', 0), spans[0].get('Y', 0)
+                for sx, sy in splitters:
+                    if math.hypot(sx - bx, sy - by) < 15.0: # 15 feet tolerance
+                        hh_store = 15
+                        break
+            
             # Anchor Row (Zero Span, Starting HH Storage)
             sheet.cell(row=r_idx, column=col_offset).value = 0 # Span 0
-            sheet.cell(row=r_idx, column=col_offset + 1).value = 50 # Default HH storage
+            sheet.cell(row=r_idx, column=col_offset + 1).value = hh_store
             r_idx += 1
             
             # Sequentially layout the actual geometric traces

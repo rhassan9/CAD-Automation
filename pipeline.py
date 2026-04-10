@@ -30,7 +30,6 @@ def parse_dxf_data(filepath):
         # Labor Spans
         if 'MODELITEM' in name:
             data['labor_spans'].append(attribs)
-            continue
             
         fiber_co = attribs.get('FIBER_CO', '').strip().upper()
         splitter_tag = attribs.get('SPLITTER', '').strip().upper()
@@ -60,11 +59,15 @@ def parse_dxf_data(filepath):
                     'placement_no': placement_no,
                     'placement_address': attribs.get('PLACEMEN', '').strip(),
                     'base_1x8_name': base_name,
+                    'x': entity.dxf.insert.x,
+                    'y': entity.dxf.insert.y,
                     'ports': {} # Ports 1-8 dictionaries
                 }
                 
         # Parse 1x4 Secondary Splitters
         elif '1X4 SPLITTER' in fiber_co:
+            attribs['X'] = entity.dxf.insert.x
+            attribs['Y'] = entity.dxf.insert.y
             splitters_1x4_raw.append(attribs)
             
         # Collect items for Cable Sheet temporarily
@@ -185,7 +188,9 @@ def parse_dxf_data(filepath):
                     'original_port': original_port_no,
                     '1x4_name': s_1x4.get('FIBER_CO', ''),
                     'placement_address_1x4': s_1x4.get('PLACEMEN', ''),
-                    'houses': houses
+                    'houses': houses,
+                    'x': s_1x4.get('X', 0),
+                    'y': s_1x4.get('Y', 0)
                 })
 
     # Apply Reverse Top-Down Port Assignment
@@ -209,6 +214,7 @@ def parse_dxf_data(filepath):
             }
             current_port -= 1
                 
+    data['splitters_1x4'] = splitters_1x4_raw            
     return data
 
 if __name__ == '__main__':
