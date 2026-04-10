@@ -1,0 +1,48 @@
+Its a rough draft that needs to be formatted to follow the workflow a bit better, but should be good to reference to see what all goes into our deliverables and design steps.
+
+Notes from brainstorming meetings:
+
+Team is still learning AutoCAD fundamentals; automations should be documented with the custom command aliases in mind. Automations can only be built where data hygiene within our autocad is standardized (very few places currently).
+
+Bill of Materials (BOM) / Deliverables Generation
+- Type: Excel/CAD Integration Script
+- Goal: Auto-populate deliverables spreadsheet from CAD file data
+- Current Status: Partially automated; cable sheet still requires manual work. Master prompts are used to fill in the 'house count' sheet, the '1x8 splitter' sheet, and the '1x8 to 1x4 splitter' sheet. They are inconsistent.
+
+'House count' is a sheet that includes all the addresses of our houses and businesses that we are servicing. This sheet would take a decent amount of time to manually populate; but the master prompt we use does not appear to be consistent in output despite numerous attempts.
+
+<<<image one>>>>
+
+The 1x8 splitter sheet is relatively simple to understand and potentially automate by pulling data directly from the 1x8 splitter blocks within autocad
+
+<<second image>>
+
+The block itself contains the name and address, which also includes the fiber allocated (113 in example) to this specific splitter - this number basically equals the column# within this sheet. From there every column else is data entry.
+
+<<third image>>>
+The 1x8 to 1x4 splitter sheet is going to be a bit more difficult to automate based upon your knowledge of fiber, but I intend on writing out something detailed to explain what you're looking at.
+
+Essentially, every 1x8 feeds 8 1x4's. And each 1x4 feeds 4 service houses/businesses. The heavy lift of this sheet is matching the 1x4's to each of its (max) 4 service location addresses.
+
+<<fourth image>>
+
+After that sheet is filled out, we use the data from there to use our master prompt and populate the house count sheet with the data from in there.
+
+'Labor span sheet' is one that we have no current automation for. It appears to be a near match to the 'cable sheet'.
+
+
+<<<5,6 images>>
+
+
+A lot of the data needed for this is likely capable of being pulled from the construction note blocks (on ITEM_LAYER). 
+
+I intend on giving a detailed writeup for a lot of these including ideas for how we can standardize data entry on the designer's end within autocad to make all these particular automations possible without dramatically increasing design time: obviously our automations need to ultimately reduce hours. I'm a little hamstrung for time though so please feel free to propose anything you can think of, happy to give feedback as often as you need.
+
+The material sheet should potentially be the easiest to automate as it is basically going to be block counts within cad converted to a cell value.
+
+
+<<last image>>
+
+For example the primary splitter value is just equal to the amount of 1x8's within the design (minus the spare used by designers while designing).
+
+Finally, let me know if you'd like a copy of a filled out workbook, and if a good autocad file would be useful to you.

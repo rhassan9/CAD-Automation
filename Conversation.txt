@@ -1,0 +1,103 @@
+Ronnie:
+
+Apr 02, 11:55 PM
+Hey - quick question.
+
+I’m working on a project where we need to automate generating an Excel workbook from AutoCAD drawings (.dwg / possibly .dxf).
+
+Right now engineers manually read values (spans, counts, splitter info, etc.) from CAD and fill out a structured Excel file — takes ~6–8 hours per job. We want to automate that.
+
+The idea is:
+- extract data from CAD (blocks / attributes / spans)
+- apply mapping rules
+- fill a predefined Excel workbook
+
+End goal is a simple tool (ideally Python-based, can be packaged as .exe).
+
+Before we go deeper — have you worked with anything like:
+- CAD / DXF parsing (ezdxf or similar)
+- or AutoCAD data extraction
+- plus Excel automation in Python?
+
+If yes, can you briefly share how you’d approach something like this?
+
+
+Me
+
+Apr 03, 12:37 AM
+Hello there
+Yes i am really good with excel automation using python but don't have much experience with AutoCAD 
+
+But i can suggest you 2 options:
+
+1. You can setup one time data extraction template inside auto cad it will return csv files and then we can use python to do other work.
+
+2. Or you can save the file as .DXF because python can't easily read .dwg file. Python has built-in library that scans .DXF file, so we can use it find our relevant data and then convert into excel format
+
+
+Ronnie:
+
+Apr 03, 12:50 AM
+Your approach makes sense, especially the DXF + Python route.
+
+Let’s assume we go with DXF parsing. I just want to confirm a couple things before moving forward:
+- How would you extract things like block attributes (e.g. splitters, counts)?
+- How would you calculate spans/distances from the drawing (lines/polylines)?
+- And how would you structure the mapping into the Excel workbook?
+
+No need for super detail — just want to make sure we’re aligned on approach.
+Also, based on what you’ve seen so far, how quickly do you think you could get a first working version (even partial)?
+
+
+Me:
+
+Apr 03, 12:55 AM
+As i told you earlier, I don't have experience with AutoCAD but i have info about library.
+
+Basically the library query the drawings modelspace to find all blocks reference entities
+
+
+Me:
+
+Apr 03, 12:55 AM
+So we can filter these by block name
+
+
+Me:
+
+Apr 03, 12:57 AM
+For standard line we can x, y coordinates and then can calculate the distance, for polylines, library itself can read total value
+
+
+Me:
+
+Apr 03, 12:57 AM
+And the whole data gets stored in pandas library, so, we can perform any calculation, that's not complicated
+
+
+Me:
+
+Apr 03, 12:58 AM
+I will need 4-5 days to provide you first MVP for testing
+
+
+Ronnie:
+
+Apr 03, 1:15 AM
+Hassan. Thanks again, your approach still makes sense to me.
+
+Before I decide, just want to double check one thing.
+
+If I give you the DXF and mapping rules, are you comfortable handling:
+- extracting block attributes
+- calculating spans / polyline lengths
+- and filling multiple sheets in the workbook
+
+all directly from the file without needing anything manual in AutoCAD?
+And would your 4–5 day estimate still hold for a first working version?
+
+
+Me:
+
+Apr 03, 7:44 AM
+Yes i can help you out. If you share DXF file with mapping rules.

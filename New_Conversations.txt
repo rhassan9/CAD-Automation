@@ -1,0 +1,283 @@
+To get the '1x8' and '1x8 to 1x4' sheets,
+ 
+there's data in the 1x4 splitter blocks called AD_1 - AD_4. We run a lisp that populates these attributes with address data within the block.
+ 
+Then we do an extraction file that pulls 1x8 and 1x4 data into an excel sheet where we then upload it to a 'master prompt' in an LLM
+ 
+This output is used to catch final mistakes, copy and paste to fill out those two noted sheets; and then with all of the address data completed in the '1x8 to 1x4' sheet we have the ability to populate the house count sheet with data without manual entry.
+
+=============
+
+1x8 and 1x8 to 1x4 Master Prompt
+You are filling two Lumos workbook sheets from an extraction file:
+
+1) CABLE TO 1X8 SPLICING
+2) SPLICING 1X8 TO 1X4 SPLITS
+
+Your job is to read the extract carefully and produce workbook-ready data for those two sheets only.
+
+IMPORTANT GOAL
+Build the 1x8 and 1x4 sheets exactly the way Lumos expects them:
+- Primary splitter naming must follow Lumos naming
+- Secondary splitter naming must follow Lumos naming
+- T-counts must follow the exact 1x8-port-to-1x4-range mapping
+- Missing or unused 1x8 ports must show as SPARE
+- Fiber order must follow the actual feeder/secondary position and remain color-for-color
+- Do not invent ports, splitters, or addresses
+- Do not “smooth over” mismatches silently; flag them
+
+==================================================
+SECTION 1 — LUMOS RULES TO FOLLOW
+==================================================
+
+A. 1X8 PRIMARY SPLITTER NAMING
+Primary splitters are named from the feeder fiber / port feeding them.
+
+Format:
+OLT{OLT_NO}_{PLACEMENT_NO}P_{MARKET}
+
+Example:
+OLT09_32P_HLSPNC
+
+The 1x8 output ports are written as:
+{BASE_NAME}, {PORT_NO} ({BASE_NAME}-{PORT_NO})
+
+Example:
+OLT09_32P_HLSPNC, 4 (OLT09_32P_HLSPNC-4)
+
+B. 1X4 SECONDARY SPLITTER NAMING
+Secondary splitters are named from the 1x8 port feeding them.
+
+Format:
+OLT{OLT_NO}_{PLACEMENT_NO}P_{SECONDARY_NO}S_{MARKET}
+
+Example:
+OLT09_32P_7S_HLSPNC
+
+C. T-COUNT / OUT COUNT MAPPING
+Each 1x8 port maps to one 1x4 and one customer range:
+
+Port 1 -> 1-4
+Port 2 -> 5-8
+Port 3 -> 9-12
+Port 4 -> 13-16
+Port 5 -> 17-20
+Port 6 -> 21-24
+Port 7 -> 25-28
+Port 8 -> 29-32
+
+D. SPARE RULE
+If a 1x8 port is not actually used by a 1x4 in the extract, that 1x8 port must be SPARE.
+
+For the 1x4 sheet:
+- if an entire secondary position is unused, that row should be shown as spare
+- do not create a fake 1x4 splitter name for a spare row
+
+E. COLOR-FOR-COLOR / POSITION RULE
+Fiber assignments must stay aligned with the actual feeder and secondary position.
+Do not renumber secondaries just to make the sheet look full.
+The actual 1x8 port / secondary number is the source of truth.
+
+This means:
+- if only ports 3-8 are used, ports 1-2 must remain SPARE
+- if a row says it is secondary 6, it must stay secondary 6
+- T-count must match that secondary number
+- do not shift rows upward to remove gaps
+
+F. LOWEST TO HIGHEST SECONDARY ORDER
+On the 1x4 sheet, list the secondaries in order from 1 to 8, top to bottom.
+That means 1-4 at the top and 29-32 at the bottom.
+
+==================================================
+SECTION 2 — WHAT TO READ FROM THE EXTRACT
+==================================================
+
+Use the extract as the only source of truth for:
+- placement number
+- placement address
+- OLT number
+- market code
+- 1x4 splitter name if present
+- split reference / pair count / source assignment
+- servicing addresses
+- whether a row is truly used or spare
+
+If the extract has both FIBER_CO and PAIR_CNT or similar fields:
+- use the secondary number implied by the split reference / feeder reference as the truth for position
+- use the 1x4 splitter name field as the displayed 1x4 name only if it agrees with the secondary position
+- if they disagree, flag the mismatch clearly
+
+==================================================
+SECTION 3 — OUTPUT NEEDED FOR SHEET 1
+==================================================
+
+SHEET NAME:
+CABLE TO 1X8 SPLICING
+
+For each 1x8 placement, output one row containing:
+
+- placement_no
+- placement_address
+- base_1x8_name
+- port_1
+- port_2
+- port_3
+- port_4
+- port_5
+- port_6
+- port_7
+- port_8
+
+Where:
+base_1x8_name = OLT{OLT_NO}_{PLACEMENT_NO}P_{MARKET}
+
+Each used port should be written as:
+{BASE_NAME}, {PORT_NO} ({BASE_NAME}-{PORT_NO})
+
+Each unused port should be:
+SPARE
+
+Example:
+placement_no = 118
+placement_address = F 123 SAMPLE RD
+base_1x8_name = OLT09_118P_HLSPNC
+port_1 = SPARE
+port_2 = SPARE
+port_3 = OLT09_118P_HLSPNC, 3 (OLT09_118P_HLSPNC-3)
+...
+port_8 = OLT09_118P_HLSPNC, 8 (OLT09_118P_HLSPNC-8)
+
+==================================================
+SECTION 4 — OUTPUT NEEDED FOR SHEET 2
+==================================================
+
+SHEET NAME:
+SPLICING 1X8 TO 1X4 SPLITS
+
+Each 1x8 placement becomes one 8-row block, one row for each secondary position 1 through 8.
+
+For each of the 8 rows output:
+
+- splitter_name_1x4
+- t_count
+- placement_address_1x4
+- split_reference
+- serving_1
+- serving_2
+- serving_3
+- serving_4
+
+Where:
+splitter_name_1x4 = OLT{OLT_NO}_{PLACEMENT_NO}P_{SECONDARY_NO}S_{MARKET}
+t_count uses:
+1 -> 1-4
+2 -> 5-8
+3 -> 9-12
+4 -> 13-16
+5 -> 17-20
+6 -> 21-24
+7 -> 25-28
+8 -> 29-32
+
+split_reference format:
+{BASE_1X8_NAME}, {SECONDARY_NO}
+
+Example:
+OLT09_32P_HLSPNC, 7
+
+If the row is spare:
+- splitter_name_1x4 = blank
+- placement_address_1x4 = blank
+- split_reference = SPARE
+- serving_1 through serving_4 = blank
+
+Do not place a fake 1x4 name on a spare row.
+
+==================================================
+SECTION 5 — REQUIRED QC CHECKS
+==================================================
+
+Before finalizing, run these checks:
+
+1. Every 1x8 placement must produce exactly 8 1x4 rows.
+2. Every used 1x4 row must have the correct secondary number.
+3. Every secondary number must map to the correct T-count.
+4. Missing secondaries must remain SPARE, not shifted.
+5. No duplicate secondary number under the same 1x8.
+6. 1x8 sheet must match the used secondaries from the 1x4 sheet.
+7. If FIBER_CO name and split reference disagree on secondary number, flag it.
+8. Clean whitespace only. Do not rewrite addresses beyond trimming spaces.
+9. Do not correct spelling unless explicitly told.
+10. Preserve actual gaps in port usage.
+
+==================================================
+SECTION 6 — HOW TO HANDLE MISMATCHES
+==================================================
+
+If the extract is inconsistent, do this:
+
+CASE A — Split reference says secondary 6, but 1x4 name says secondary 5
+- use secondary 6 for position and T-count
+- flag mismatch
+
+CASE B — 1x8 placement exists but only secondaries 3, 4, 8 exist
+- 1x8 sheet:
+  port 1 = SPARE
+  port 2 = SPARE
+  port 3 = used
+  port 4 = used
+  port 5 = SPARE
+  port 6 = SPARE
+  port 7 = SPARE
+  port 8 = used
+
+- 1x4 sheet:
+  rows 1, 2, 5, 6, 7 = SPARE
+  rows 3, 4, 8 = used
+
+CASE C — all 8 secondaries exist
+- no spares
+
+==================================================
+SECTION 7 — REQUIRED OUTPUT FORMAT
+==================================================
+
+Return three sections only:
+
+SECTION A — 1X8 SHEET DATA
+Return a clean table with columns:
+placement_no | placement_address | base_1x8_name | port_1 | port_2 | port_3 | port_4 | port_5 | port_6 | port_7 | port_8
+
+SECTION B — 1X4 SHEET DATA
+Return a clean table with columns:
+placement_no | secondary_no | splitter_name_1x4 | t_count | placement_address_1x4 | split_reference | serving_1 | serving_2 | serving_3 | serving_4
+
+SECTION C — QC ISSUES
+Return only actual issues found, such as:
+- mismatched secondary numbering
+- duplicate secondary under one 1x8
+- missing placement number
+- malformed name
+- impossible T-count
+
+If there are no issues, write:
+QC ISSUES: NONE
+
+==================================================
+SECTION 8 — FINAL INSTRUCTIONS
+==================================================
+
+Do not explain the standards.
+Do not summarize the workbook.
+Do not discuss other tabs.
+Do not change naming formats.
+Do not fill gaps by assumption unless explicitly supported by the extract.
+Do not collapse spare ports.
+Always preserve actual secondary position.
+Always make the 1x8 sheet and 1x4 sheet agree with each other.
+
+Now use the attached extract and produce:
+1) 1X8 SHEET DATA
+2) 1X4 SHEET DATA
+3) QC ISSUES
+==================

@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+~
+.DS_Store
+lumos_pdf_extracted.txt
