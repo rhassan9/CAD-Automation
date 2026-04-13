@@ -57,6 +57,8 @@ class SpliceRenderer:
         print("Populating 1x8 Splice sheet dynamically...")
         sheet_1x8 = self.wb['CABLE TO 1X8 SPLICING']
         self.extracted_1x8_template_data = {}
+        
+        center_align = Alignment(horizontal='center', vertical='center')
 
         sorted_splitters = []
         for b_name, struct in splitters_1x8.items():
@@ -87,15 +89,25 @@ class SpliceRenderer:
                     'row': target_1x8_row
                 }
 
-                sheet_1x8.cell(row=target_1x8_row, column=4).value = int(placement_no)
-                sheet_1x8.cell(row=target_1x8_row, column=5).value = struct.get('placement_address', '')
-                sheet_1x8.cell(row=target_1x8_row, column=6).value = base_name
+                c4 = sheet_1x8.cell(row=target_1x8_row, column=4)
+                c4.value = int(placement_no)
+                c4.alignment = center_align
+                
+                c5 = sheet_1x8.cell(row=target_1x8_row, column=5)
+                c5.value = struct.get('placement_address', '')
+                c5.alignment = center_align
+                
+                c6 = sheet_1x8.cell(row=target_1x8_row, column=6)
+                c6.value = base_name
+                c6.alignment = center_align
 
                 for port in range(1, 9):
                     out_1x8_str = "SPARE"
                     if port in struct['ports']:
                         out_1x8_str = f"{base_name}, {port} ({base_name}-{port})"
-                    sheet_1x8.cell(row=target_1x8_row, column=6+port).value = out_1x8_str
+                    c_port = sheet_1x8.cell(row=target_1x8_row, column=6+port)
+                    c_port.value = out_1x8_str
+                    c_port.alignment = center_align
             else:
                 print(f"WARNING: Placement {placement_no} not found in template Column A!")
 
@@ -208,6 +220,16 @@ class SpliceRenderer:
                     for i in range(4):
                         if i < len(houses) and houses[i]:
                             sheet_1x4.cell(row=row_offset, column=5 + i).value = houses[i]
+                            
+                    # Clean up: If Name (Col 1) and Address (Col 3) exist, fill any empty cell in Col 4-8 with SPARE
+                    v1 = sheet_1x4.cell(row=row_offset, column=1).value
+                    v3 = sheet_1x4.cell(row=row_offset, column=3).value
+                    if v1 and v3:
+                        for check_c in range(4, 9):
+                            cell_val = sheet_1x4.cell(row=row_offset, column=check_c).value
+                            if not cell_val or str(cell_val).strip() == '':
+                                sheet_1x4.cell(row=row_offset, column=check_c).value = 'SPARE'
+                                
                 else:
                     sheet_1x4.cell(row=row_offset, column=4).value = 'SPARE'
                     sheet_1x4.cell(row=row_offset, column=1).value = None
