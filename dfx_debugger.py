@@ -1,13 +1,24 @@
 """
 ==========================================================
- MANUAL EXTRACTION ASSISTANT — Cable Sheet Data Vacuum
- Purpose: Produces a clean, engineer-ready CSV that 
-          organizes all conduit spans by their correct 
-          segment (from the CABLE CALLOUT callout), 
-          includes Start/End addresses, and flags 
-          splitter-adjacent handholes (15ft vs 50ft).
- Usage:   python3 dfx_debugger.py
-          Output: Cable_Sheet_Assistant.csv
+ MANUAL EXTRACTION ASSISTANT v4 — Cable Sheet Data Vacuum
+ 
+ Root Cause Analysis:
+ - v1-v3 failed because:
+   a) The SP attribute on ITEM_NUMBER blocks is NOT the 
+      viewport page number (SP-1, SP-2). It is a separate 
+      internal drafting counter with no consistent mapping.
+   b) For 48-count segments, multiple callouts share the 
+      same geographic area, so radius-based lookup assigns 
+      the same spans to multiple segments.
+
+ CORRECT APPROACH:
+ - Use "Exclusive Closest Callout" assignment:
+   Each span belongs to EXACTLY ONE callout — the one it is 
+   geographically closest to. No span is shared.
+ - This is geometrically equivalent to a Voronoi partition:
+   each span is claimed by its nearest callout center.
+ - Then apply a max radius cap (1800 units) to exclude spans 
+   that are genuinely in unrelated areas of the map.
 ==========================================================
 """
 import ezdxf
@@ -15,61 +26,34 @@ import math
 import csv
 import re
 
-# ─── CONFIGURATION ────────────────────────────────────────
-TARGET_DXF    = "1_05_CX_4.2.26.dxf"
-OUTPUT_CSV    = "Cable_Sheet_Assistant.csv"
-SPLITTER_PROXIMITY = 50   # feet: distance to flag a span as "near a splitter"
-CALLOUT_RADIUS     = 3500 # max radius to associate a span with a callout
-# ──────────────────────────────────────────────────────────
+TARGET_DXF = "1_05_CX_4.2.26.dxf"
+OUTPUT_CSV = "Cable_Sheet_Assistant.csv"
+JOB_PREFIX = "01.05"
+MAX_RADIUS  = 1800   # Don't claim spans farther than this
+SPLITTER_PROXIMITY = 200
 
 
-def parse_seg_number(callout_name: str) -> tuple:
-    """
-    Extract a sortable key from a callout like 'HSP.01.05.01 144'.
-    Returns (seg_int, cable_size_int) so sorting is numeric, not lexicographic.
-    """
-    parts = callout_name.split()
+def parse_seg_number(name: str) -> tuple:
+    parts = name.split()
     cable_size = int(parts[-1]) if parts and parts[-1].isdigit() else 999
     nums = re.findall(r'\d+', parts[0] if parts else '')
     seg_num = int(nums[-1]) if nums else 999
     return (seg_num, cable_size)
 
 
-def get_nearest_address(bx, by, house_numbers, road_names):
-    """
-    Build a full street address by combining:
-    - Nearest house number from the ADDRESSES layer (e.g. '5932')
-    - Nearest road name from the Road Names layer (e.g. 'JOHNSON POND RD')
-    This matches how the DXF is structured: numbers and names are on separate layers.
-    """
-    best_num_dist = float('inf')
-    best_num = ''
-    for num, ax, ay in house_numbers:
-        d = math.hypot(ax - bx, ay - by)
-        if d < best_num_dist:
-            best_num_dist = d
-            best_num = num
-
-    best_road_dist = float('inf')
-    best_road = ''
-    for road, ax, ay in road_names:
-        d = math.hypot(ax - bx, ay - by)
-        if d < best_road_dist:
-            best_road_dist = d
-            best_road = road
-
-    if best_num and best_road:
-        return f"{best_num} {best_road.strip()}"
-    elif best_num:
-        return best_num
-    elif best_road:
-        return best_road.strip()
-    return '(address not found)'
+def build_full_address(bx, by, house_numbers, road_names):
+    best_num  = min(house_numbers, key=lambda h: math.hypot(h[1]-bx, h[2]-by), default=None)
+    best_road = min(road_names,    key=lambda r: math.hypot(r[1]-bx, r[2]-by), default=None)
+    num_str   = best_num[0].strip()  if best_num  else ''
+    road_str  = best_road[0].strip() if best_road else ''
+    if num_str and road_str:
+        return f"{num_str} {road_str}"
+    return num_str or road_str or '(not found)'
 
 
 def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
     print(f"\n{'='*60}")
-    print(f"  Manual Extraction Assistant")
+    print(f"  Manual Extraction Assistant v4")
     print(f"  Loading: {dxf_filepath}")
     print(f"{'='*60}")
 
@@ -77,175 +61,176 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         doc = ezdxf.readfile(dxf_filepath)
         msp = doc.modelspace()
     except Exception as e:
-        print(f"ERROR loading DXF: {e}")
+        print(f"ERROR: {e}")
         return
 
-    # ── Stage 1: Collect all data buckets ──────────────────
-    callouts     = []   # cable segment callouts
-    spans        = []   # ITEM_NUMBER conduit blocks
-    splitters    = []   # 1x8 splitter locations (for 15ft storage flag)
-    house_numbers = []  # ADDRESSES layer: just the house number (e.g. '5932')
-    road_names    = []  # Road Names layer: just the street name (e.g. 'JOHNSON POND RD')
+    callouts      = []
+    spans         = []
+    splitters     = []
+    house_numbers = []
+    road_names    = []
+    bore_labels   = []
 
-    print("Stage 1/4: Extracting INSERT blocks...")
+    print("Stage 1/4: Extracting blocks...")
     for entity in msp.query('INSERT'):
         layer = entity.dxf.layer.upper()
         bx, by = entity.dxf.insert.x, entity.dxf.insert.y
-
         if not getattr(entity, 'attribs', None):
             continue
         attribs = {a.dxf.tag: getattr(a.dxf, 'text', '') for a in entity.attribs if hasattr(a.dxf, 'tag')}
 
-        # --- Cable Callouts (source of truth for segment ID & cable size) ---
         if layer == 'CABLE CALLOUT':
             name = attribs.get('FIBER_1', '').strip()
-            if 'HSP' in name.upper():
+            if JOB_PREFIX in name:
                 sort_key = parse_seg_number(name)
                 parts = name.split()
-                cable_size_str = parts[-1] if parts[-1].isdigit() else 'UNK'
+                cable_size_str = parts[-1] if parts and parts[-1].isdigit() else 'UNK'
                 callouts.append({
-                    'name': name,
-                    'cable_size': cable_size_str,
-                    'sort_key': sort_key,
-                    'x': bx, 'y': by
+                    'name': name, 'cable_size': cable_size_str,
+                    'sort_key': sort_key, 'x': bx, 'y': by
                 })
 
-        # --- Conduit Span blocks ---
         elif layer == 'ITEM_NUMBER':
             item_no = attribs.get('ITEM#', '').strip()
             length_raw = attribs.get('LENGTH', '0').strip()
             if not item_no:
                 continue
-            # Regex extract numeric length (strips prefixes like "B-F 54")
             m = re.search(r'\d+', length_raw)
             length_num = int(m.group()) if m else 0
-            # Flag which cable sizes the draftsman ticked (for QC warning column)
-            ticked = [s for s in ['48', '96', '144', '288', '432'] if attribs.get(f'F{s}') == '1']
+            ticked = [s for s in ['48','96','144','288','432'] if attribs.get(f'F{s}') == '1']
             spans.append({
-                'item'   : item_no,
-                'length_raw': length_raw,
-                'length' : length_num,
-                'sp'     : attribs.get('SP', '').strip(),
-                'ticked' : ','.join(ticked) if ticked else 'BLANK',
+                'item': item_no, 'length_raw': length_raw, 'length': length_num,
+                'sp_attr': attribs.get('SP', '').strip(),
+                'ticked': ','.join(ticked) if ticked else 'BLANK',
                 'x': bx, 'y': by
             })
 
-        # --- 1x8 Splitters ---
         elif '1X8 SPLITTER' in attribs.get('SPLITTER', '').upper():
-            splitters.append({'name': attribs.get('SPLITTER', ''), 'x': bx, 'y': by})
+            splitters.append({'name': attribs.get('SPLITTER',''), 'x': bx, 'y': by})
 
-    # --- Street Addresses (house numbers + road names on separate layers) ---
-    print("Stage 2/4: Extracting address labels...")
+    print("Stage 2/4: Extracting text labels...")
     for entity in msp.query('TEXT MTEXT'):
         layer = entity.dxf.layer.upper()
         try:
             txt = entity.text if entity.dxftype() == 'MTEXT' else getattr(entity.dxf, 'text', '')
             txt = txt.strip()
             x, y = entity.dxf.insert.x, entity.dxf.insert.y
-            if not txt:
-                continue
+            if not txt: continue
             if layer == 'ADDRESSES':
                 house_numbers.append((txt, x, y))
             elif layer == 'ROAD NAMES':
                 road_names.append((txt, x, y))
+            elif 'BORE' in layer or 'DIREC' in layer:
+                if re.match(r'^[A-Z]-[A-Z]\s+\d+', txt):
+                    bore_labels.append({'label': txt.replace("'","").strip(), 'x': x, 'y': y})
         except:
             pass
 
-    # Sort callouts numerically (SEG 1, 2, 3... not 1, 10, 11, 2...)
-    # Deduplicate: CAD sometimes has duplicate callout blocks for the same segment
-    seen_callout_names = set()
+    # Deduplicate callouts — keep only one per name (the closest one to SP-1 makes no sense here, just keep first)
+    seen = set()
     unique_callouts = []
     for c in sorted(callouts, key=lambda x: x['sort_key']):
-        if c['name'] not in seen_callout_names:
-            seen_callout_names.add(c['name'])
+        if c['name'] not in seen:
+            seen.add(c['name'])
             unique_callouts.append(c)
     callouts = unique_callouts
-    print(f"  Found {len(callouts)} callouts | {len(spans)} spans | {len(splitters)} splitters | {len(house_numbers)} house numbers | {len(road_names)} road names")
+    print(f"  {len(callouts)} unique callouts | {len(spans)} spans | {len(splitters)} splitters")
 
-    # ── Stage 2: Map each span to its closest callout ──────
-    print("Stage 3/4: Mapping spans to closest segment callout...")
+    # ── EXCLUSIVE VORONOI ASSIGNMENT ───────────────────────
+    # Each span goes to exactly one callout — the nearest one.
+    # Cap at MAX_RADIUS so isolated spans don't travel across the whole map.
+    print("Stage 3/4: Voronoi-assigning spans to callouts...")
     for span in spans:
-        best_callout = None
-        min_dist = float('inf')
+        nearest_callout = None
+        nearest_dist    = float('inf')
         for c in callouts:
             d = math.hypot(span['x'] - c['x'], span['y'] - c['y'])
-            if d < min_dist and d < CALLOUT_RADIUS:
-                min_dist = d
-                best_callout = c
-        span['callout'] = best_callout
+            if d < nearest_dist:
+                nearest_dist   = d
+                nearest_callout = c
+        if nearest_dist <= MAX_RADIUS:
+            span['callout']  = nearest_callout
+        else:
+            span['callout'] = None  # orphan — too far from any callout
+
         span['near_splitter'] = any(
             math.hypot(span['x'] - s['x'], span['y'] - s['y']) < SPLITTER_PROXIMITY
             for s in splitters
         )
 
-    # ── Stage 3: Build per-segment output rows ─────────────
+    orphans = sum(1 for s in spans if s['callout'] is None)
+    print(f"  {len(spans)-orphans} spans assigned | {orphans} orphans (>{MAX_RADIUS} from any callout)")
+
+    # ── BUILD OUTPUT ROWS ──────────────────────────────────
     print("Stage 4/4: Building output table...")
     rows = []
     for callout in callouts:
         seg_spans = [s for s in spans if s.get('callout') and s['callout']['name'] == callout['name']]
-        seg_spans.sort(key=lambda s: s['item'])  # alphabetical A, B, C...
+        seg_spans.sort(key=lambda s: s['item'])
 
-        # Compute Start/End address for this segment.
-        # Per video: Start = address at the callout position (where cable begins).
-        #            End   = address at the span physically FARTHEST from callout
-        #                    (where the cable dies at the splice block).
-        start_addr = get_nearest_address(callout['x'], callout['y'], house_numbers, road_names)
+        start_addr = build_full_address(callout['x'], callout['y'], house_numbers, road_names)
         if seg_spans:
-            farthest_span = max(seg_spans, key=lambda s: math.hypot(s['x'] - callout['x'], s['y'] - callout['y']))
-            end_addr = get_nearest_address(farthest_span['x'], farthest_span['y'], house_numbers, road_names)
+            farthest = max(seg_spans, key=lambda s: math.hypot(s['x']-callout['x'], s['y']-callout['y']))
+            end_addr = build_full_address(farthest['x'], farthest['y'], house_numbers, road_names)
         else:
             end_addr = '(no spans found)'
 
-        # Anchor row (Row 15 in Excel) — always SPAN=0, STORAGE=50
+        # Anchor row
         rows.append({
-            'Segment'          : callout['name'],
-            'Cable Size'       : callout['cable_size'],
-            'Start Address'    : start_addr,
-            'End Address'      : end_addr,
-            'Item # (A/B/C…)'  : 'ANCHOR',
-            'Span (ft)'        : 0,
-            'Length (raw)'     : '–',
-            'Storage (ft)'     : 50,
-            'SP Page'          : '–',
-            'CAD Checkbox (QC)': '–',
-            'Notes'            : 'Row 15 anchor — SPAN always 0, STORAGE always 50'
+            'Segment'       : callout['name'],
+            'Cable Size'    : callout['cable_size'],
+            'Start Address' : start_addr,
+            'End Address'   : end_addr,
+            'Item #'        : 'ANCHOR',
+            'Span (ft)'     : 0,
+            'Bore Label'    : '–',
+            'Storage (ft)'  : 50,
+            'SP Attr'       : '–',
+            'QC (Checkbox)' : '–',
+            'Notes'         : 'ANCHOR — SPAN=0, STORAGE=50 always'
         })
 
-        # Data rows
         for s in seg_spans:
+            # Nearest bore label
+            if bore_labels:
+                nb    = min(bore_labels, key=lambda b: math.hypot(b['x']-s['x'], b['y']-s['y']))
+                nb_d  = math.hypot(nb['x']-s['x'], nb['y']-s['y'])
+                bore  = nb['label'] if nb_d < 300 else '–'
+            else:
+                bore = '–'
+
             storage = 15 if s['near_splitter'] else 50
+            qc_note = ''
+            if s['ticked'] not in ['BLANK', callout['cable_size']]:
+                qc_note = f"⚠️ checkbox={s['ticked']} expected={callout['cable_size']}"
+
             rows.append({
-                'Segment'          : callout['name'],
-                'Cable Size'       : callout['cable_size'],
-                'Start Address'    : start_addr,
-                'End Address'      : end_addr,
-                'Item # (A/B/C…)'  : s['item'],
-                'Span (ft)'        : s['length'],
-                'Length (raw)'     : s['length_raw'],
-                'Storage (ft)'     : storage,
-                'SP Page'          : s['sp'],
-                'CAD Checkbox (QC)': s['ticked'],
-                'Notes'            : '⚠️ CHECKBOX MISMATCH' if s['ticked'] not in ['BLANK', callout['cable_size']] else ''
+                'Segment'       : callout['name'],
+                'Cable Size'    : callout['cable_size'],
+                'Start Address' : start_addr,
+                'End Address'   : end_addr,
+                'Item #'        : s['item'],
+                'Span (ft)'     : s['length'],
+                'Bore Label'    : bore,
+                'Storage (ft)'  : storage,
+                'SP Attr'       : s['sp_attr'],
+                'QC (Checkbox)' : s['ticked'],
+                'Notes'         : qc_note
             })
 
-    # ── Stage 4: Write CSV ─────────────────────────────────
     if not rows:
-        print("WARNING: No data rows generated. Check DXF file and layer names.")
+        print("WARNING: No rows generated.")
         return
 
     headers = list(rows[0].keys())
-    with open(output_csv_path, 'w', newline='', encoding='utf-8-sig') as f:  # utf-8-sig for Excel compatibility
+    with open(output_csv_path, 'w', newline='', encoding='utf-8-sig') as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"\n✅ SUCCESS")
-    print(f"   Output:    {output_csv_path}")
-    print(f"   Segments:  {len(callouts)}")
-    print(f"   Data Rows: {len(rows) - len(callouts)} span rows + {len(callouts)} anchor rows")
-    print(f"\n   Open Cable_Sheet_Assistant.csv in Excel.")
-    print(f"   Each segment shows: ANCHOR row first, then spans A/B/C...")
-    print(f"   ⚠️  CHECKBOX MISMATCH rows = spans where draftsman ticked wrong size.")
+    span_rows = len(rows) - len(callouts)
+    print(f"\n✅ SUCCESS: {output_csv_path}")
+    print(f"   Segments: {len(callouts)} | Span rows: {span_rows}")
 
 
 if __name__ == '__main__':
