@@ -35,16 +35,36 @@ def parse_seg_number(callout_name: str) -> tuple:
     return (seg_num, cable_size)
 
 
-def get_nearest_address(bx, by, addresses):
-    """Return the closest address text to a given coordinate."""
-    best_dist = float('inf')
-    best_txt = '(address not found)'
-    for txt, ax, ay in addresses:
+def get_nearest_address(bx, by, house_numbers, road_names):
+    """
+    Build a full street address by combining:
+    - Nearest house number from the ADDRESSES layer (e.g. '5932')
+    - Nearest road name from the Road Names layer (e.g. 'JOHNSON POND RD')
+    This matches how the DXF is structured: numbers and names are on separate layers.
+    """
+    best_num_dist = float('inf')
+    best_num = ''
+    for num, ax, ay in house_numbers:
         d = math.hypot(ax - bx, ay - by)
-        if d < best_dist:
-            best_dist = d
-            best_txt = txt
-    return best_txt
+        if d < best_num_dist:
+            best_num_dist = d
+            best_num = num
+
+    best_road_dist = float('inf')
+    best_road = ''
+    for road, ax, ay in road_names:
+        d = math.hypot(ax - bx, ay - by)
+        if d < best_road_dist:
+            best_road_dist = d
+            best_road = road
+
+    if best_num and best_road:
+        return f"{best_num} {best_road.strip()}"
+    elif best_num:
+        return best_num
+    elif best_road:
+        return best_road.strip()
+    return '(address not found)'
 
 
 def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
@@ -61,10 +81,11 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         return
 
     # ── Stage 1: Collect all data buckets ──────────────────
-    callouts  = []   # cable segment callouts
-    spans     = []   # ITEM_NUMBER conduit blocks
-    splitters = []   # 1x8 splitter locations (for 15ft storage flag)
-    addresses = []   # NOTES_1_FULL_ADDRESS text entities
+    callouts     = []   # cable segment callouts
+    spans        = []   # ITEM_NUMBER conduit blocks
+    splitters    = []   # 1x8 splitter locations (for 15ft storage flag)
+    house_numbers = []  # ADDRESSES layer: just the house number (e.g. '5932')
+    road_names    = []  # Road Names layer: just the street name (e.g. 'JOHNSON POND RD')
 
     print("Stage 1/4: Extracting INSERT blocks...")
     for entity in msp.query('INSERT'):
@@ -113,13 +134,22 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         elif '1X8 SPLITTER' in attribs.get('SPLITTER', '').upper():
             splitters.append({'name': attribs.get('SPLITTER', ''), 'x': bx, 'y': by})
 
-    # --- Street Addresses ---
+    # --- Street Addresses (house numbers + road names on separate layers) ---
     print("Stage 2/4: Extracting address labels...")
     for entity in msp.query('TEXT MTEXT'):
-        if entity.dxf.layer.upper() == 'NOTES_1_FULL_ADDRESS':
+        layer = entity.dxf.layer.upper()
+        try:
             txt = entity.text if entity.dxftype() == 'MTEXT' else getattr(entity.dxf, 'text', '')
-            if txt.strip():
-                addresses.append((txt.strip(), entity.dxf.insert.x, entity.dxf.insert.y))
+            txt = txt.strip()
+            x, y = entity.dxf.insert.x, entity.dxf.insert.y
+            if not txt:
+                continue
+            if layer == 'ADDRESSES':
+                house_numbers.append((txt, x, y))
+            elif layer == 'ROAD NAMES':
+                road_names.append((txt, x, y))
+        except:
+            pass
 
     # Sort callouts numerically (SEG 1, 2, 3... not 1, 10, 11, 2...)
     # Deduplicate: CAD sometimes has duplicate callout blocks for the same segment
@@ -130,7 +160,7 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
             seen_callout_names.add(c['name'])
             unique_callouts.append(c)
     callouts = unique_callouts
-    print(f"  Found {len(callouts)} callouts | {len(spans)} spans | {len(splitters)} splitters | {len(addresses)} addresses")
+    print(f"  Found {len(callouts)} callouts | {len(spans)} spans | {len(splitters)} splitters | {len(house_numbers)} house numbers | {len(road_names)} road names")
 
     # ── Stage 2: Map each span to its closest callout ──────
     print("Stage 3/4: Mapping spans to closest segment callout...")
@@ -155,14 +185,16 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         seg_spans = [s for s in spans if s.get('callout') and s['callout']['name'] == callout['name']]
         seg_spans.sort(key=lambda s: s['item'])  # alphabetical A, B, C...
 
-        # Compute Start/End address for this segment
+        # Compute Start/End address for this segment.
+        # Per video: Start = address at the callout position (where cable begins).
+        #            End   = address at the span physically FARTHEST from callout
+        #                    (where the cable dies at the splice block).
+        start_addr = get_nearest_address(callout['x'], callout['y'], house_numbers, road_names)
         if seg_spans:
-            first_span = seg_spans[0]
-            last_span  = seg_spans[-1]
-            start_addr = get_nearest_address(first_span['x'], first_span['y'], addresses)
-            end_addr   = get_nearest_address(last_span['x'],  last_span['y'],  addresses)
+            farthest_span = max(seg_spans, key=lambda s: math.hypot(s['x'] - callout['x'], s['y'] - callout['y']))
+            end_addr = get_nearest_address(farthest_span['x'], farthest_span['y'], house_numbers, road_names)
         else:
-            start_addr = end_addr = '(no spans found)'
+            end_addr = '(no spans found)'
 
         # Anchor row (Row 15 in Excel) — always SPAN=0, STORAGE=50
         rows.append({
