@@ -3,6 +3,7 @@ import shutil
 import openpyxl
 import math
 import copy
+import re
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
 class HouseCountRenderer:
@@ -241,22 +242,19 @@ class SpliceRenderer:
 
 class CableSheetRenderer:
     def populate_cable_sheet(self, data):
-        print("Populating Cable Sheet dynamically...")
-        if 'CABLE SHEET' not in self.wb.sheetnames:
-            print("WARNING: CABLE SHEET not found in workbook.")
-            return
-            
-        sheet = self.wb['CABLE SHEET']
-        center_align = Alignment(horizontal='center', vertical='center')
-        
-        cable_spans = data.get('cable_spans', {})
-        sorted_segs = sorted(cable_spans.keys())
-        
-        splitters = []
-        for v in data.get('splitters_1x8', {}).values():
-            splitters.append((v.get('x', 0), v.get('y', 0)))
-        for v in data.get('splitters_1x4', []):
-            splitters.append((v.get('X', 0), v.get('Y', 0)))
+        # ---------------------------------------------------------------
+        # CABLE SHEET AUTO-POPULATION IS DISABLED (v2.0)
+        # Reason: CAD data hygiene (incorrect F48/F96/F144 checkboxes,
+        # missing attributes, stacked conduits) makes rigid extraction
+        # produce incorrect values. A forensic audit of 1_05_CX_4.2.26.dxf
+        # confirmed 1,205 mismatch blocks and 4,995 blind blocks.
+        #
+        # Replacement: Use the Manual Extraction Assistant script
+        # (dfx_debugger.py) which produces Cable_Sheet_Assistant.csv
+        # with all raw conduit data organized by segment for manual entry.
+        # ---------------------------------------------------------------
+        print("INFO: Cable Sheet population is DISABLED. Use Cable_Sheet_Assistant.csv for manual data entry.")
+        return
         
         for seg_idx, seg_num in enumerate(sorted_segs):
             if seg_idx >= 25:
@@ -351,16 +349,29 @@ class LaborSpanRenderer:
             f288 = str(span.get('F288', '')).strip()
             f432 = str(span.get('F432', '')).strip()
             
+            # --- STRICT EXTRACTION & REGEX LOGIC ---
             col_a = f"SP-{sp_val}" if sp_val else ""
             col_b = item_val
             
+            # Bulletproof Length Extraction (Strips text like "B-F ")
             try:
                 col_c = int(length_val)
             except ValueError:
-                col_c = 0
+                match = re.search(r'\d+', str(length_val))
+                col_c = int(match.group()) if match else 0
                 
-            col_d = cond_sz if cond_sz in ['2', '4', '2"', '4"'] else ""
-            col_e = "yes" if drop_flg and drop_flg != '0' else "no"
+            # Dynamic Conduit Sizing (Strict Extraction: leaves blank if missing in CAD)
+            if cond_sz and str(cond_sz).upper() not in ['0', 'NONE', '']:
+                col_d = f'{cond_sz}"' if not str(cond_sz).endswith('"') else cond_sz
+            else:
+                col_d = ""
+                
+            # Paralleling Flag (Strict Extraction: output matches exact CAD data)
+            col_e = "yes" if drop_flg and str(drop_flg) != '0' else "no"
+            
+            # Aerial Flag Logic (For future Columns J-O expansion if needed)
+            cad_color = str(span.get('CAD_COLOR', ''))
+            is_aerial = cad_color in ['5', '33'] 
             
             cables = sum(1 for f_val in [f48, f96, f144, f288, f432] if f_val and f_val != '0')
             col_f = cables

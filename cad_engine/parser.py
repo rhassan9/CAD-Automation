@@ -33,10 +33,16 @@ class DXFParser:
             if not getattr(entity, 'attribs', None):
                 continue
                 
-            attribs = {a.dxf.tag: a.dxf.text for a in entity.attribs if hasattr(a.dxf, 'tag')}
+            attribs = {a.dxf.tag: getattr(a.dxf, 'text', '') for a in entity.attribs if hasattr(a.dxf, 'tag')}
             name = entity.dxf.name.upper()
             
-            if 'MODELITEM' in name:
+            # --- THE ANONYMOUS BLOCK & AERIAL FIX ---
+            is_model_item = 'MODELITEM' in name or ('ITEM#' in attribs and 'LENGTH' in attribs)
+            
+            if is_model_item:
+                # Capture physics for potential Aerial routing
+                attribs['CAD_LAYER'] = entity.dxf.layer
+                attribs['CAD_COLOR'] = entity.dxf.color
                 self.data['labor_spans'].append(attribs)
                 
             fiber_co = attribs.get('FIBER_CO', '').strip().upper()

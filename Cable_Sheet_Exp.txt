@@ -1,0 +1,48 @@
+After thoroughly analyzing Mace’s explanation and the visual CAD workflow in the video, here is the definitive engineering master-list of what we learned. We will use this as the foundation for our LLM instructions.
+
+### 1. The Visual vs. Physical Disconnect (Cable vs. Conduit)
+This is the biggest trap we originally fell into, and Mace clarified it perfectly.
+* **The Orange Line is Fake Data:** The continuous orange (or red) line representing the cable is purely for "visualization" and "drafting" to show the planned route. We cannot use its length for our calculations.
+* **The Dashed Line is the Source of Truth:** The actual footages required for the Excel sheet come strictly from the dashed lines, which represent the physical **conduit**.
+* **Data Engineering Action:** Our Python vacuum script must completely ignore the geometry of the orange cable line and strictly extract the `ITEM_NUMBER` blocks attached to the conduit path.
+
+### 2. The "Handhole-to-Handhole" Summation Rule
+This is the specific reason we are using an LLM. Standard Python would fail here because AutoCAD does not logically group broken lines.
+* **The Core Rule:** A single "Span" in the Excel sheet represents the total distance from one Handhole to the next Handhole.
+* **The "Broken Conduit" Reality:** Conduit paths are frequently broken up by road crossings or bore pits (visually represented by labels like `B-F 54`, `B-H 11`, and `H-B 137`).
+* **The Calculator Method:** To get the correct number for the Excel sheet, the engineer literally has to do mental math, adding those separate segments together (e.g., 137 + 11 + 54) to create one single span value. 
+* **Data Engineering Action:** The LLM prompt must explicitly instruct the AI to act as this "human calculator." It must look at the extracted string of conduit blocks between Handhole A and Handhole B and sum their `LENGTH` attributes before outputting the final JSON.
+
+### 3. The Splice "Death and Rebirth" Boundary
+We need to know exactly when a segment begins and ends so we don't accidentally trace the entire city.
+* **The Starting Callout:** The `CABLE CALLOUT` block dictates the segment. For example, in `HSP.01.05.01 144`, the `01` means Segment 1, and it specifically tracks the 144-count cable.
+* **The Hard Stop:** When that 144-count cable hits a Splice Block and splits into smaller cables (e.g., a 96-count and a 48-count), the 144-count cable "ends, dies right here". 
+* **The Rebirth:** That exact splice block becomes the literal starting point for Segment 2 (the 96-count) and Segment 3 (the 48-count).
+* **Data Engineering Action:** We will program the Python script to map the coordinates of all Splice blocks. When feeding data to the LLM, we will flag these coordinates as absolute boundaries.
+
+### 4. Storage (Slack) Logic
+Mace confirmed our previous theories regarding the `15` vs `50` values, making this entirely rule-based.
+* **The Anchor Row:** Every single cable sheet segment starts with a `0` span and exactly `50` feet of slack storage.
+* **Hardware-Dependent Storage:** For the subsequent spans, the storage value depends entirely on the type of handhole the conduit runs into.
+* **The 15/50 Rule:** If the handhole is labeled `SPLT` (Splitter), the storage is `15`. If it is *anything* else, the storage defaults to `50`.
+* **Data Engineering Action:** Our Python script must extract the handhole type (SPLT vs standard) along with its coordinates so the LLM knows which storage value to assign to the summed span.
+
+### 5. Metadata Mapping (Addresses)
+* **Start/End Points:** The Start and End addresses on the Excel sheet are simply the nearest physical parcel addresses to where the specific conduit run starts and where it dies (the splice).
+* **Data Engineering Action:** Python will calculate the nearest `NOTES_1_FULL_ADDRESS` text to the first and last coordinates of the traced path and provide them to the LLM as the verified Start/End variables.
+
+***
+
+Explain how we are going to find Start and END Address for each segment?
+
+Based on Mace's explanation in the video, finding the Start and End addresses relies on a purely visual, geographic relationship on the CAD map. 
+
+Here is exactly how he determines those addresses:
+
+* **Identify the Physical Endpoints:** You must first locate the exact physical points on the drawing where the individual conduit (or cable segment) starts and where it completely ends. 
+* **The "Closest Address" Rule:** Once you pinpoint where the cable physically starts or dies, the address you put into the Excel sheet is simply the parcel address physically closest to that point on the map.
+* **Example for the End Address:** Mace demonstrated this with Cable 1, showing exactly where the 144-count cable ends (at the splice block). He then looked at the map and noted that the address closest to that specific end point was "1616 Spicewood" (though it visually says 6016 on the map).
+* **Example for the Start Address:** Conversely, he panned back to where Cable 1 originated and assigned its starting address as "5932 Johnson Pond Road" because it was the closest address to the beginning of the conduit run.
+
+**How we translate this to automation:**
+Our Python script will track the X/Y coordinates of the very first conduit block in the segment (the Start) and the X/Y coordinates of the splice block where the segment dies (the End). It will then calculate the mathematical distance to all `NOTES_1_FULL_ADDRESS` entities and pick the one with the shortest distance to each endpoint.
