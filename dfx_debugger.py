@@ -196,10 +196,11 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         else:
             end_addr = '(no spans found)'
 
-        # Anchor row
+        # Anchor row — always SPAN=0, STORAGE=50, Method=New Conduit
         rows.append({
             'Segment'       : callout['name'],
             'Cable Size'    : callout['cable_size'],
+            'Method'        : 'New Conduit',
             'Start Address' : start_addr,
             'End Address'   : end_addr,
             'Item #'        : 'ANCHOR',
@@ -230,6 +231,7 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
             rows.append({
                 'Segment'       : callout['name'],
                 'Cable Size'    : callout['cable_size'],
+                'Method'        : 'New Conduit',
                 'Start Address' : start_addr,
                 'End Address'   : end_addr,
                 'Item #'        : s['item'],
