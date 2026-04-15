@@ -28,9 +28,15 @@ import re
 
 TARGET_DXF = "1_05_CX_4.2.26.dxf"
 OUTPUT_CSV = "Cable_Sheet_Assistant.csv"
-JOB_PREFIX = "01.05"
-MAX_RADIUS  = 1800   # Don't claim spans farther than this
-SPLITTER_PROXIMITY = 200
+JOB_PREFIX = "01.05"          # Only process callouts for this job
+SPLT_PROXIMITY    = 150       # Units: PROP_HH within this dist of 1x8 splitter = SPLT handhole
+SPAN_HH_PROXIMITY = 150       # Units: span within this dist of a PROP_HH = attached to that HH
+# ──────────────────────────────────────────────────────────
+
+
+def normalize_callout_name(name: str) -> str:
+    """Fix CAD typos like 'HSP.01,05.25' -> 'HSP.01.05.25'."""
+    return name.replace(',', '.')
 
 
 def parse_seg_number(name: str) -> tuple:
@@ -66,7 +72,8 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
 
     callouts      = []
     spans         = []
-    splitters     = []
+    splitters     = []   # 1x8 splitter INSERT blocks
+    prop_hh       = []   # proposed handholes (PROP_HH layer)
     house_numbers = []
     road_names    = []
     bore_labels   = []
@@ -81,6 +88,7 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
 
         if layer == 'CABLE CALLOUT':
             name = attribs.get('FIBER_1', '').strip()
+            name = normalize_callout_name(name)  # Fix any commas in the name
             if JOB_PREFIX in name:
                 sort_key = parse_seg_number(name)
                 parts = name.split()
@@ -89,6 +97,11 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
                     'name': name, 'cable_size': cable_size_str,
                     'sort_key': sort_key, 'x': bx, 'y': by
                 })
+
+        elif layer == 'PROP_HH':
+            # Proposed handholes — used to determine SPLT vs standard storage
+            hh_type = attribs.get('HH_TYPE', '?')
+            prop_hh.append({'type': hh_type, 'x': bx, 'y': by, 'is_splt': False})
 
         elif layer == 'ITEM_NUMBER':
             item_no = attribs.get('ITEM#', '').strip()
@@ -107,7 +120,6 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
 
         elif '1X8 SPLITTER' in attribs.get('SPLITTER', '').upper():
             splitters.append({'name': attribs.get('SPLITTER',''), 'x': bx, 'y': by})
-
     print("Stage 2/4: Extracting text labels...")
     for entity in msp.query('TEXT MTEXT'):
         layer = entity.dxf.layer.upper()
@@ -126,6 +138,15 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         except:
             pass
 
+    # Flag SPLT handholes: any PROP_HH within SPLT_PROXIMITY of a 1x8 splitter
+    for hh in prop_hh:
+        hh['is_splt'] = any(
+            math.hypot(hh['x'] - s['x'], hh['y'] - s['y']) < SPLT_PROXIMITY
+            for s in splitters
+        )
+    splt_hh   = [hh for hh in prop_hh if hh['is_splt']]
+    std_hh    = [hh for hh in prop_hh if not hh['is_splt']]
+
     # Deduplicate callouts — keep only one per name (the closest one to SP-1 makes no sense here, just keep first)
     seen = set()
     unique_callouts = []
@@ -134,7 +155,8 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
             seen.add(c['name'])
             unique_callouts.append(c)
     callouts = unique_callouts
-    print(f"  {len(callouts)} unique callouts | {len(spans)} spans | {len(splitters)} splitters")
+    print(f"  {len(callouts)} unique callouts | {len(spans)} spans | {len(splitters)} splitters | "
+          f"{len(splt_hh)} SPLT handholes | {len(std_hh)} standard handholes")
 
     # ── EXCLUSIVE VORONOI ASSIGNMENT ───────────────────────
     # Each span goes to exactly one callout — the nearest one.
@@ -146,20 +168,19 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         for c in callouts:
             d = math.hypot(span['x'] - c['x'], span['y'] - c['y'])
             if d < nearest_dist:
-                nearest_dist   = d
+                nearest_dist    = d
                 nearest_callout = c
-        if nearest_dist <= MAX_RADIUS:
-            span['callout']  = nearest_callout
-        else:
-            span['callout'] = None  # orphan — too far from any callout
+        span['callout'] = nearest_callout if nearest_dist <= 1800 else None
 
-        span['near_splitter'] = any(
-            math.hypot(span['x'] - s['x'], span['y'] - s['y']) < SPLITTER_PROXIMITY
-            for s in splitters
-        )
+        # SPLT storage: is this span's nearest PROP_HH a SPLT type?
+        if prop_hh:
+            nearest_hh = min(prop_hh, key=lambda h: math.hypot(h['x']-span['x'], h['y']-span['y']))
+            span['near_splt'] = nearest_hh['is_splt']
+        else:
+            span['near_splt'] = False
 
     orphans = sum(1 for s in spans if s['callout'] is None)
-    print(f"  {len(spans)-orphans} spans assigned | {orphans} orphans (>{MAX_RADIUS} from any callout)")
+    print(f"  {len(spans)-orphans} spans assigned | {orphans} orphans (too far from any callout)")
 
     # ── BUILD OUTPUT ROWS ──────────────────────────────────
     print("Stage 4/4: Building output table...")
@@ -191,7 +212,7 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         })
 
         for s in seg_spans:
-            # Nearest bore label
+            # Bore label: nearest PROPOSED_DIREC_BORE text annotation
             if bore_labels:
                 nb    = min(bore_labels, key=lambda b: math.hypot(b['x']-s['x'], b['y']-s['y']))
                 nb_d  = math.hypot(nb['x']-s['x'], nb['y']-s['y'])
@@ -199,7 +220,9 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
             else:
                 bore = '–'
 
-            storage = 15 if s['near_splitter'] else 50
+            # Storage: 15 if nearest handhole is SPLT, else 50
+            storage = 15 if s['near_splt'] else 50
+
             qc_note = ''
             if s['ticked'] not in ['BLANK', callout['cable_size']]:
                 qc_note = f"⚠️ checkbox={s['ticked']} expected={callout['cable_size']}"
