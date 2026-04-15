@@ -254,67 +254,6 @@ class CableSheetRenderer:
         # with all raw conduit data organized by segment for manual entry.
         # ---------------------------------------------------------------
         print("INFO: Cable Sheet population is DISABLED. Use Cable_Sheet_Assistant.csv for manual data entry.")
-        return
-        
-        for seg_idx, seg_num in enumerate(sorted_segs):
-            if seg_idx >= 25:
-                print(f"WARNING: Max 25 segments supported by template format. Skipping SEG {seg_num}")
-                break
-                
-            col_offset = 3 + (seg_idx * 5)
-            spans = cable_spans[seg_num]
-            
-            if spans:
-                first = spans[0]
-                sheet.cell(row=9, column=col_offset).value = first.get('METHOD', 'New Conduit')
-                sheet.cell(row=10, column=col_offset).value = first.get('START_ADDRESS', '')
-                sheet.cell(row=11, column=col_offset).value = first.get('END_ADDRESS', '')
-                sheet.cell(row=12, column=col_offset).value = int(first.get('SIZE', 48))
-                
-            for r in range(15, 200):
-                for c in range(col_offset, col_offset + 3):
-                    cell = sheet.cell(row=r, column=c)
-                    if type(cell).__name__ != 'MergedCell':
-                        cell.value = None
-            
-            r_idx = 15
-            hh_store = 50
-            if spans:
-                bx, by = spans[0].get('X', 0), spans[0].get('Y', 0)
-                for sx, sy in splitters:
-                    if math.hypot(sx - bx, sy - by) < 15.0:
-                        hh_store = 15
-                        break
-            
-            sheet.cell(row=r_idx, column=col_offset).value = 0
-            sheet.cell(row=r_idx, column=col_offset + 1).value = hh_store
-            r_idx += 1
-            
-            for s in spans:
-                try:
-                    span_val = int(s.get('SPAN', 0))
-                except ValueError:
-                    span_val = 0
-                    
-                try:
-                    storage_val = int(s.get('STORAGE', 0))
-                except ValueError:
-                    storage_val = 0
-                    
-                cell_span = sheet.cell(row=r_idx, column=col_offset)
-                if type(cell_span).__name__ != 'MergedCell':
-                    cell_span.value = span_val
-                    
-                cell_store = sheet.cell(row=r_idx, column=col_offset + 1)
-                if type(cell_store).__name__ != 'MergedCell':
-                    cell_store.value = storage_val
-                
-                for c in range(col_offset, col_offset + 3):
-                    cell = sheet.cell(row=r_idx, column=c)
-                    if type(cell).__name__ != 'MergedCell':
-                        cell.alignment = center_align
-                
-                r_idx += 1
 
 class LaborSpanRenderer:
     def populate_labor_span(self, labor_spans):
