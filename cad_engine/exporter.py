@@ -276,6 +276,11 @@ class LaborSpanRenderer:
         r_idx = 7
         for span in sorted_labor:
             sp_val = str(span.get('SP', '')).strip()
+            
+            # Ignore blind blocks (like those on CROSSING PROFILES) that have no Job Print Page
+            if not sp_val or sp_val.upper() in ['NONE', '0']:
+                continue
+                
             item_val = str(span.get('ITEM#', '')).strip()
             length_val = str(span.get('LENGTH', '0')).strip()
             cond_sz = str(span.get('COND_SZ', '')).strip()
