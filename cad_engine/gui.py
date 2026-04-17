@@ -3,6 +3,17 @@ from tkinter import filedialog, messagebox
 import threading
 from PIL import Image
 import os
+import sys
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 class AppUI(ctk.CTk):
     def __init__(self):
@@ -12,7 +23,7 @@ class AppUI(ctk.CTk):
         self.geometry("800x600")
         
         try:
-            self.iconbitmap(os.path.abspath("Materials/App Icon.ico"))
+            self.iconbitmap(resource_path("Materials/App Icon.ico"))
         except Exception:
             pass
 
@@ -20,7 +31,7 @@ class AppUI(ctk.CTk):
         ctk.set_default_color_theme("blue")
         
         try:
-            bg_image = Image.open("Materials/Background.png")
+            bg_image = Image.open(resource_path("Materials/Background.png"))
             self.bg_image_ctk = ctk.CTkImage(light_image=bg_image, dark_image=bg_image, size=(800, 600))
             self.bg_label = ctk.CTkLabel(self, image=self.bg_image_ctk, text="")
             self.bg_label.place(relx=0.5, rely=0.5, anchor="center")
@@ -31,7 +42,7 @@ class AppUI(ctk.CTk):
         self.main_frame.place(relx=0.5, rely=0.5, anchor="center")
         
         try:
-            logo_image = Image.open("Materials/App Logo.png")
+            logo_image = Image.open(resource_path("Materials/App Logo.png"))
             aspect_ratio = logo_image.width / logo_image.height
             new_height = 80
             new_width = int(new_height * aspect_ratio)
