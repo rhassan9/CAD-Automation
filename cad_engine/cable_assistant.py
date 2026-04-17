@@ -25,6 +25,7 @@ import ezdxf
 import math
 import csv
 import re
+from collections import Counter
 
 
 SPLT_PROXIMITY    = 150       # Units: PROP_HH within this dist of 1x8 splitter = SPLT handhole
