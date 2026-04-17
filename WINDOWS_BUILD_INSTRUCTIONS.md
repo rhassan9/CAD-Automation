@@ -12,14 +12,23 @@ This guide explains how to bundle the `CAD-Automation` Python project into a sta
    cd CAD-Automation
    ```
 
-## Step 1: Install Required Libraries
-You need to install the dependencies required by the application as well as PyInstaller itself.
-Run this inside your `CAD-Automation` directory:
+## Step 1: Create a Clean Virtual Environment (Crucial)
+To guarantee your `.exe` file is as small and fast as possible without picking up unnecessary global Python packages from your computer, create a fresh sandbox.
+
+Run these inside your `CAD-Automation` directory:
+```cmd
+python -m venv venv
+venv\Scripts\activate
+```
+*(You will know it worked if you see `(venv)` appear at the start of your command prompt)*
+
+## Step 2: Install Required Libraries
+With your virtual environment active, install precisely the dependencies required by the application:
 ```cmd
 pip install ezdxf openpyxl customtkinter pillow pyinstaller
 ```
 
-## Step 2: Build the `.exe` File
+## Step 3: Build the `.exe` File
 PyInstaller needs specific flags to properly package your interface images (`Materials` folder).
 
 Run the following command exactly as written:
@@ -33,7 +42,7 @@ pyinstaller --noconfirm --onedir --windowed --icon "Materials/App Icon.ico" --na
 - `--icon`: Injects your custom icon into the actual `.exe` file.
 - `--add-data "Materials/;Materials/"`: Tells PyInstaller to embed your background and logo pictures into the final build.
 
-## Step 3: Run Your App
+## Step 4: Run Your App
 Once the bundling completes successfully:
 1. Go into the newly created `dist/` folder.
 2. Open the `CAD Extraction Engine/` folder.
