@@ -26,9 +26,7 @@ import math
 import csv
 import re
 
-TARGET_DXF = "1_05_CX_4.2.26.dxf"
-OUTPUT_CSV = "Cable_Sheet_Assistant.csv"
-JOB_PREFIX = "01.05"          # Only process callouts for this job
+
 SPLT_PROXIMITY    = 150       # Units: PROP_HH within this dist of 1x8 splitter = SPLT handhole
 SPAN_HH_PROXIMITY = 150       # Units: span within this dist of a PROP_HH = attached to that HH
 # ──────────────────────────────────────────────────────────
@@ -59,7 +57,7 @@ def build_full_address(bx, by, house_numbers, road_names):
 
 def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
     print(f"\n{'='*60}")
-    print(f"  Manual Extraction Assistant v4")
+    print(f"  Cable Sheet Manual Extraction Assistant")
     print(f"  Loading: {dxf_filepath}")
     print(f"{'='*60}")
 
@@ -78,7 +76,26 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
     road_names    = []
     bore_labels   = []
 
-    print("Stage 1/4: Extracting blocks...")
+    print("Stage 1/4: Extracting blocks and detecting Job Prefix...")
+    
+    # Pre-scan to dynamically determine JOB_PREFIX
+    prefixes = []
+    for entity in msp.query('INSERT'):
+        if entity.dxf.layer.upper() == 'CABLE CALLOUT':
+            if not getattr(entity, 'attribs', None): continue
+            attribs = {a.dxf.tag: getattr(a.dxf, 'text', '') for a in entity.attribs if hasattr(a.dxf, 'tag')}
+            name = attribs.get('FIBER_1', '').strip()
+            match = re.search(r'HSP\.(\d{2}[.,]\d{2})', name)
+            if match:
+                prefixes.append(match.group(1).replace(',', '.'))
+                
+    if not prefixes:
+        print("ERROR: No valid CABLE CALLOUT blocks found with an 'HSP.XX.XX' prefix.")
+        return
+        
+    JOB_PREFIX = Counter(prefixes).most_common(1)[0][0]
+    print(f"  Detected Primary Job Prefix: {JOB_PREFIX} (Filtering out cross-job bounds)")
+
     for entity in msp.query('INSERT'):
         layer = entity.dxf.layer.upper()
         bx, by = entity.dxf.insert.x, entity.dxf.insert.y
@@ -256,7 +273,3 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
     span_rows = len(rows) - len(callouts)
     print(f"\n✅ SUCCESS: {output_csv_path}")
     print(f"   Segments: {len(callouts)} | Span rows: {span_rows}")
-
-
-if __name__ == '__main__':
-    generate_cable_assistant(TARGET_DXF, OUTPUT_CSV)

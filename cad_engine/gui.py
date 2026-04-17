@@ -102,11 +102,17 @@ class AppUI(ctk.CTk):
         try:
             from cad_engine.parser import DXFParser
             from cad_engine.exporter import ExcelExporter
+            from cad_engine.cable_assistant import generate_cable_assistant
+            import os
             
-            parser = DXFParser(self.dxf_path.get())
+            dxf_target = self.dxf_path.get()
+            out_target = self.output_path.get()
+            csv_target = os.path.splitext(out_target)[0] + "_Cable_Sequence.csv"
+            
+            parser = DXFParser(dxf_target)
             data = parser.execute()
             
-            writer = ExcelExporter(self.output_path.get(), self.template_path.get())
+            writer = ExcelExporter(out_target, self.template_path.get())
             writer.populate_house_count(data['house_count'])
             writer.populate_splices(data['splitters_1x8'])
             writer.populate_1x4_splits(data['splitters_1x8'])
@@ -114,8 +120,11 @@ class AppUI(ctk.CTk):
             writer.populate_labor_span(data.get('labor_spans', []))
             writer.save()
             
+            # Sub-execution for Python-native Cable Sheet
+            generate_cable_assistant(dxf_target, csv_target)
+            
             self.after(0, lambda: self.status_var.set("Status: Success!"))
-            self.after(0, lambda: messagebox.showinfo("Success", f"Topology mapped securely. Final output generated at:\n{self.output_path.get()}"))
+            self.after(0, lambda: messagebox.showinfo("Success", f"Topology mapped securely. Final output:\n\n1. Labor & Splicing: {os.path.basename(out_target)}\n2. Cable Sheet Sequence: {os.path.basename(csv_target)}"))
         except Exception as e:
             self.after(0, lambda: self.status_var.set("Status: System Exception Encountered!"))
             self.after(0, lambda: messagebox.showerror("Execution Fault", f"An internal exception occurred during mapping:\n{str(e)}"))
