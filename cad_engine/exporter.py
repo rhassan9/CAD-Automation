@@ -299,21 +299,11 @@ class LaborSpanRenderer:
                 match = re.search(r'\d+', str(length_val))
                 col_c = int(match.group()) if match else 0
                 
-            # Dynamic Conduit Sizing (Strict Extraction: leaves blank if missing in CAD)
-            if cond_sz and str(cond_sz).upper() not in ['0', 'NONE', '']:
-                col_d = f'{cond_sz}"' if not str(cond_sz).endswith('"') else cond_sz
-            else:
-                col_d = ""
-                
-            # Paralleling Flag (Strict Extraction: output matches exact CAD data)
-            col_e = "yes" if drop_flg and str(drop_flg) != '0' else "no"
-            
-            # Aerial Flag Logic (For future Columns J-O expansion if needed)
-            cad_color = str(span.get('CAD_COLOR', ''))
-            is_aerial = cad_color in ['5', '33'] 
-            
-            cables = sum(1 for f_val in [f48, f96, f144, f288, f432] if f_val and f_val != '0')
-            col_f = cables
+            # Per client review: Column D (Non-Standard Size), Column E (Paralleling Drop), 
+            # and Column F (Cables this span) require manual designer entry. Leaving strictly blank.
+            col_d = ""
+            col_e = ""
+            col_f = ""
             
             try:
                 cond_qty = int(cond_qty_str)
