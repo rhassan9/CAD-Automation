@@ -333,6 +333,13 @@ class LaborSpanRenderer:
                     cell.alignment = center_align
             
             r_idx += 1
+            
+        # Clear any remaining old data in the template to avoid trailing ghost data
+        max_row = sheet.max_row
+        while r_idx <= max_row:
+            for c in range(1, 16):
+                sheet.cell(row=r_idx, column=c).value = ""
+            r_idx += 1
 
 class ExcelExporter(HouseCountRenderer, SpliceRenderer, CableSheetRenderer, LaborSpanRenderer):
     def __init__(self, output_path, template_path=None):
