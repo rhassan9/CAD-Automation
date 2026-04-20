@@ -145,10 +145,12 @@ class AppUI(ctk.CTk):
             self.after(0, lambda: messagebox.showinfo("Extraction Completed", f"Topology mapped securely. Final output:\n\n1. Labor & Splicing: {os.path.basename(out_target)}\n2. Cable: {os.path.basename(csv_target)}{warning_text}"))
             
         except CADExtractionError as ce:
+            err_msg = str(ce)
             self.after(0, lambda: self.status_var.set("Status: Extraction Aborted (Data Issue)"))
-            self.after(0, lambda: messagebox.showwarning("Extraction Fault", f"Data extraction aborted natively:\n\n{str(ce)}\n\nPlease verify the integrity of the selected DXF file."))
+            self.after(0, lambda m=err_msg: messagebox.showwarning("Extraction Fault", f"Data extraction aborted natively:\n\n{m}\n\nPlease verify the integrity of the selected DXF file."))
         except Exception as e:
+            sys_err = str(e)
             self.after(0, lambda: self.status_var.set("Status: System Exception Encountered!"))
-            self.after(0, lambda: messagebox.showerror("Execution Fault", f"An internal exception occurred during mapping:\n{str(e)}"))
+            self.after(0, lambda m=sys_err: messagebox.showerror("Execution Fault", f"An internal exception occurred during mapping:\n{m}"))
         finally:
             self.after(0, lambda: self.run_btn.configure(state="normal"))
