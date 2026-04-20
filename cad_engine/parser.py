@@ -1,6 +1,7 @@
 import re
 import math
 import ezdxf
+from cad_engine.errors import CADWarningInfo
 
 class DXFParser:
     def __init__(self, filepath):
@@ -19,6 +20,7 @@ class DXFParser:
         self.splitters_1x4_raw = []
         self.temp_cable_blocks = []
         self.callouts = []
+        self.warnings = []
         
     def execute(self):
         self._extract_blocks()
@@ -26,7 +28,34 @@ class DXFParser:
         self._apply_splicing_logic()
         
         self.data['splitters_1x4'] = self.splitters_1x4_raw
+        self._run_structural_validation()
         return self.data
+        
+    def _run_structural_validation(self):
+        # Fire warnings if critical components are missing completely
+        if not self.data['splitters_1x8']:
+            self.warnings.append(CADWarningInfo(
+                "No 1x8 Primary Splitter blocks detected in drawing.",
+                "SPLICING 1X8 TO 1X4 SPLITS"
+            ))
+            
+        if not self.data['splitters_1x4']:
+            self.warnings.append(CADWarningInfo(
+                "No 1x4 Secondary Splitters detected.",
+                "SPLICING 1X8 TO 1X4 SPLITS"
+            ))
+            
+        if not self.data['house_count']:
+            self.warnings.append(CADWarningInfo(
+                "No target houses successfully mapped to splitters.",
+                "House Count"
+            ))
+            
+        if not self.data['labor_spans']:
+            self.warnings.append(CADWarningInfo(
+                "No explicitly designated ITEM# callouts detected for Labor Spans.",
+                "LABOR SPAN SHEET"
+            ))
         
     def _extract_blocks(self):
         for entity in self.msp.query('INSERT'):

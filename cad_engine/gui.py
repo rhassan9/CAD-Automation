@@ -114,6 +114,7 @@ class AppUI(ctk.CTk):
             from cad_engine.parser import DXFParser
             from cad_engine.exporter import ExcelExporter
             from cad_engine.cable_assistant import generate_cable_assistant
+            from cad_engine.errors import CADExtractionError
             import os
             
             dxf_target = self.dxf_path.get()
@@ -134,8 +135,18 @@ class AppUI(ctk.CTk):
             # Sub-execution for Python-native Cable Sheet
             generate_cable_assistant(dxf_target, csv_target)
             
-            self.after(0, lambda: self.status_var.set("Status: Success!"))
-            self.after(0, lambda: messagebox.showinfo("Success", f"Topology mapped securely. Final output:\n\n1. Labor & Splicing: {os.path.basename(out_target)}\n2. Cable Sheet Sequence: {os.path.basename(csv_target)}"))
+            warning_text = ""
+            if parser.warnings:
+                warning_text = "\n\n⚠️ NON-FATAL WARNINGS:\n"
+                for w in parser.warnings:
+                    warning_text += f"- [{w.sheet_affected}] {w.message}\n"
+            
+            self.after(0, lambda: self.status_var.set("Status: Mapping Completed (Check Warnings)" if parser.warnings else "Status: Success!"))
+            self.after(0, lambda: messagebox.showinfo("Extraction Completed", f"Topology mapped securely. Final output:\n\n1. Labor & Splicing: {os.path.basename(out_target)}\n2. Cable: {os.path.basename(csv_target)}{warning_text}"))
+            
+        except CADExtractionError as ce:
+            self.after(0, lambda: self.status_var.set("Status: Extraction Aborted (Data Issue)"))
+            self.after(0, lambda: messagebox.showwarning("Extraction Fault", f"Data extraction aborted natively:\n\n{str(ce)}\n\nPlease verify the integrity of the selected DXF file."))
         except Exception as e:
             self.after(0, lambda: self.status_var.set("Status: System Exception Encountered!"))
             self.after(0, lambda: messagebox.showerror("Execution Fault", f"An internal exception occurred during mapping:\n{str(e)}"))

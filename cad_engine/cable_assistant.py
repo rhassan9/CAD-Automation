@@ -26,6 +26,7 @@ import math
 import csv
 import re
 from collections import Counter
+from cad_engine.errors import CADExtractionError
 
 
 SPLT_PROXIMITY    = 150       # Units: PROP_HH within this dist of 1x8 splitter = SPLT handhole
@@ -91,9 +92,12 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
                 prefixes.append(match.group(1).replace(',', '.'))
                 
     if not prefixes:
-        print("ERROR: No valid CABLE CALLOUT blocks found with an 'HSP.XX.XX' prefix.")
-        return
+        raise CADExtractionError(
+            "CRITICAL: No valid CABLE CALLOUT blocks found with an 'HSP.XX.XX' prefix.\n"
+            "The Cable Sheet cannot compute its Job Prefix and will abort."
+        )
         
+
     JOB_PREFIX = Counter(prefixes).most_common(1)[0][0]
     print(f"  Detected Primary Job Prefix: {JOB_PREFIX} (Filtering out cross-job bounds)")
 
@@ -262,8 +266,7 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
             })
 
     if not rows:
-        print("WARNING: No rows generated.")
-        return
+        raise CADExtractionError("WARNING: No valid Cable Sheet spans were successfully geometrically matched to Callouts. Result is empty.")
 
     headers = list(rows[0].keys())
     with open(output_csv_path, 'w', newline='', encoding='utf-8-sig') as f:
