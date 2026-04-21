@@ -304,6 +304,10 @@ class LaborSpanRenderer:
                 match = re.search(r'\d+', str(length_val))
                 col_c = int(match.group()) if match else 0
                 
+            # Filter out phantom/diagrammatic marker blocks that lack actual physical span lengths
+            if col_c <= 0:
+                continue
+                
             # Per client review: Column D (Non-Standard Size), Column E (Paralleling Drop), 
             # and Column F (Cables this span) require manual designer entry. Leaving strictly blank.
             col_d = ""
