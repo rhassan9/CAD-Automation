@@ -309,9 +309,9 @@ class LaborSpanRenderer:
                 continue
                 
             # Per client review: Column D (Non-Standard Size), Column E (Paralleling Drop), 
-            # and Column F (Cables this span) require manual designer entry. Leaving strictly blank.
+            # and Column F (Cables this span) require manual designer entry.
             col_d = ""
-            col_e = ""
+            col_e = "no"
             col_f = ""
             
             try:
@@ -319,7 +319,7 @@ class LaborSpanRenderer:
             except ValueError:
                 cond_qty = 0
                 
-            col_g = min(cond_qty, 2)
+            col_g = max(1, min(cond_qty, 2))
             col_h = max(0, min(cond_qty - 2, 2))
             col_i = max(0, min(cond_qty - 4, 1))
             
