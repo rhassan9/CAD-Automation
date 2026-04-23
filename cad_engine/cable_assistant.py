@@ -86,15 +86,15 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         if entity.dxf.layer.upper() == 'CABLE CALLOUT':
             if not getattr(entity, 'attribs', None): continue
             attribs = {a.dxf.tag: getattr(a.dxf, 'text', '') for a in entity.attribs if hasattr(a.dxf, 'tag')}
-            name = attribs.get('FIBER_1', '').strip()
-            match = re.search(r'HSP\.(\d{2}[.,]\d{2})', name)
+            name = attribs.get('FIBER_1', '').strip().upper()
+            match = re.search(r'[A-Z]+[.\s]*(\d{2}[.,]\d{2})', name)
             if match:
                 prefixes.append(match.group(1).replace(',', '.'))
                 
     if not prefixes:
         raise CADExtractionError(
-            "CRITICAL: No valid CABLE CALLOUT blocks found with an 'HSP.XX.XX' prefix.\n"
-            "The Cable Sheet cannot compute its Job Prefix and will abort."
+            "CRITICAL: No valid CABLE CALLOUT blocks found with a recognized '[PREFIX].XX.XX' structure.\n"
+            "The Cable Sheet cannot compute its dynamically detected Job Prefix and will abort."
         )
         
 
