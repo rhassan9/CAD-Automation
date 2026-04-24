@@ -114,7 +114,7 @@ class AppUI(ctk.CTk):
             from cad_engine.parser import DXFParser
             from cad_engine.exporter import ExcelExporter
             from cad_engine.cable_assistant import generate_cable_assistant
-            from cad_engine.errors import CADExtractionError
+            from cad_engine.errors import CADExtractionError, CableAssistantError
             import os
             
             dxf_target = self.dxf_path.get()
@@ -143,6 +143,15 @@ class AppUI(ctk.CTk):
             
             self.after(0, lambda: self.status_var.set("Status: Mapping Completed (Check Warnings)" if parser.warnings else "Status: Success!"))
             self.after(0, lambda: messagebox.showinfo("Extraction Completed", f"Topology mapped securely. Final output:\n\n1. Labor & Splicing: {os.path.basename(out_target)}\n2. Cable: {os.path.basename(csv_target)}{warning_text}"))
+            
+        except CableAssistantError as cae:
+            warning_text = f"\n\n⚠️ CABLE SEQUENCE SKIPPED:\n- {str(cae)}"
+            if parser.warnings:
+                warning_text += "\n\n⚠️ NON-FATAL EXCEL WARNINGS:\n"
+                for w in parser.warnings:
+                    warning_text += f"- [{w.sheet_affected}] {w.message}\n"
+            self.after(0, lambda: self.status_var.set("Status: Mapping Completed (Check Warnings)"))
+            self.after(0, lambda wt=warning_text: messagebox.showinfo("Extraction Completed", f"Topology mapped securely. Final output:\n\n1. Labor & Splicing: {os.path.basename(out_target)}\n2. Cable: Not Generated{wt}"))
             
         except CADExtractionError as ce:
             err_msg = str(ce)

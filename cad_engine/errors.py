@@ -1,8 +1,9 @@
 class CADExtractionError(Exception):
-    """
-    Exception raised for serious operational faults during CAD extraction.
-    Used when crucial data is fundamentally missing (e.g. no CABLE CALLOUT blocks).
-    """
+    """Raised when critical, unrecoverable data faults occur halting entirely the topology pipeline."""
+    pass
+
+class CableAssistantError(Exception):
+    """Raised when the supplementary Cable Assistant logic gracefully aborts due to incompatible DXF layouts."""
     pass
 
 class CADWarningInfo:

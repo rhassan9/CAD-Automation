@@ -271,7 +271,33 @@ class LaborSpanRenderer:
             except ValueError:
                 return 999
                 
-        sorted_labor = sorted(labor_spans, key=lambda x: (parse_sp(x.get('SP', 999)), str(x.get('ITEM#', ''))))
+        # Smart aggregation to deduplicate Labor Spans across same SP and ITEM#.
+        aggregated_labor = {}
+        for span in labor_spans:
+            sp_val = str(span.get('SP', '')).strip()
+            item_val = str(span.get('ITEM#', '')).strip()
+            
+            # Ignore blind blocks (like those on CROSSING PROFILES) that have no Job Print Page
+            if not sp_val or sp_val.upper() in ['NONE', '0']:
+                continue
+                
+            length_val = str(span.get('LENGTH', '0')).strip()
+            try:
+                c_len = int(length_val)
+            except ValueError:
+                match = re.search(r'\d+', str(length_val))
+                c_len = int(match.group()) if match else 0
+                
+            key = (sp_val, item_val)
+            if key not in aggregated_labor:
+                span['_max_len'] = c_len
+                aggregated_labor[key] = span
+            else:
+                if c_len > aggregated_labor[key]['_max_len']:
+                    span['_max_len'] = c_len
+                    aggregated_labor[key] = span
+
+        sorted_labor = sorted(aggregated_labor.values(), key=lambda x: (parse_sp(x.get('SP', 999)), str(x.get('ITEM#', ''))))
         
         r_idx = 7
         for span in sorted_labor:
@@ -297,16 +323,7 @@ class LaborSpanRenderer:
             col_a = f"SP-{sp_val}" if sp_val else ""
             col_b = item_val
             
-            # Bulletproof Length Extraction (Strips text like "B-F ")
-            try:
-                col_c = int(length_val)
-            except ValueError:
-                match = re.search(r'\d+', str(length_val))
-                col_c = int(match.group()) if match else 0
-                
-            # Filter out phantom/diagrammatic marker blocks that lack actual physical span lengths
-            if col_c <= 0:
-                continue
+            col_c = span.get('_max_len', 0)
                 
             # Per client review: Column D (Non-Standard Size), Column E (Paralleling Drop), 
             # and Column F (Cables this span) require manual designer entry.

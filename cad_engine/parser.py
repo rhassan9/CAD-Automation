@@ -66,7 +66,7 @@ class DXFParser:
             name = entity.dxf.name.upper()
             
             # --- THE ANONYMOUS BLOCK & AERIAL FIX ---
-            is_model_item = 'MODELITEM' in name or ('ITEM#' in attribs and 'LENGTH' in attribs)
+            is_model_item = 'MODELITEM' in name or ('ITEM#' in attribs)
             
             if is_model_item:
                 # Capture physics for potential Aerial routing
@@ -80,7 +80,8 @@ class DXFParser:
             # Parse Cable Callouts for spatial Segment mapping
             if entity.dxf.layer.upper() == 'CABLE CALLOUT':
                 fiber1 = attribs.get('FIBER_1', '').upper()
-                if 'HSP' in fiber1:
+                match = re.search(r'[A-Z]+[.\s]*(\d{2}[.,]\d{2})', fiber1)
+                if match:
                     self.callouts.append({'text': fiber1, 'x': entity.dxf.insert.x, 'y': entity.dxf.insert.y})
             
             # Edge Case Cleanup
@@ -92,11 +93,11 @@ class DXFParser:
                 parts = splitter_tag.split('1X8 SPLITTER ')
                 if len(parts) > 1:
                     base_name = parts[1].strip()
-                    placement_no = attribs.get('SPLITTER_NUM', '')
-                    if not placement_no and '_' in base_name:
-                        match = re.search(r'_(\d+)P_', base_name)
-                        if match:
-                            placement_no = match.group(1)
+                    match = re.search(r'_(\d+)P_', base_name)
+                    if match:
+                        placement_no = match.group(1)
+                    else:
+                        placement_no = attribs.get('SPLITTER_NUM', '')
                     
                     self.data['splitters_1x8'][base_name] = {
                         'placement_no': placement_no,
@@ -143,7 +144,7 @@ class DXFParser:
                 d = math.hypot(c['x'] - block['X'], c['y'] - block['Y'])
                 if d < best_dist:
                     best_dist = d
-                    match = re.search(r'HSP\.\d{2}\.\d{2}\.(\d{2})', c['text'])
+                    match = re.search(r'[A-Z]+[.\s]*\d{2}[.,]\d{2}[.,](\d{2})', c['text'].upper())
                     if match:
                         target_seg_num = int(match.group(1))
                         

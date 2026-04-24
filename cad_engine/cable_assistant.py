@@ -26,7 +26,7 @@ import math
 import csv
 import re
 from collections import Counter
-from cad_engine.errors import CADExtractionError
+from .errors import CADExtractionError, CableAssistantError
 
 
 SPLT_PROXIMITY    = 150       # Units: PROP_HH within this dist of 1x8 splitter = SPLT handhole
@@ -92,7 +92,7 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
                 prefixes.append(match.group(1).replace(',', '.'))
                 
     if not prefixes:
-        raise CADExtractionError(
+        raise CableAssistantError(
             "CRITICAL: No valid CABLE CALLOUT blocks found with a recognized '[PREFIX].XX.XX' structure.\n"
             "The Cable Sheet cannot compute its dynamically detected Job Prefix and will abort."
         )
