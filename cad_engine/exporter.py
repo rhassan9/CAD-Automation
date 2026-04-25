@@ -281,12 +281,18 @@ class LaborSpanRenderer:
             if sp_val.upper() in ['NONE', '0']:
                 continue
                 
+            # Distinguish between CHES blocks (no LENGTH natively) vs HSNC scratchpad blocks (LENGTH='')
+            has_explicit_length = 'LENGTH' in span
             length_val = str(span.get('LENGTH', '0')).strip()
             try:
                 c_len = int(length_val)
             except ValueError:
                 match = re.search(r'\d+', str(length_val))
                 c_len = int(match.group()) if match else 0
+                
+            # Delete phantom HSNC scratchpad blocks aggressively, but elegantly keep native CHES 0-length markers
+            if has_explicit_length and c_len <= 0:
+                continue
                 
             key = (sp_val, item_val)
             if key not in aggregated_labor:
