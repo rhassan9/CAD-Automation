@@ -179,8 +179,9 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
             if JOB_PREFIX in clean_txt.replace(',', '.'):
                 match = re.search(r'[A-Z]+[.\s]*(\d{2}[.,]\d{2}[.,]\d{2,3})', clean_txt)
                 if match:
-                    # Dynamically rebuild strict callout naming form
-                    rebuilt_name = f"{JOB_PREFIX}.{match.group(1)}".replace(',', '.')
+                    # Dynamically rebuild strict callout naming form (e.g. CHST.02.05.01)
+                    alpha_prefix = re.match(r'[A-Z]+', match.group(0)).group(0)
+                    rebuilt_name = f"{alpha_prefix}.{match.group(1).replace(',', '.')}"
                     sort_key = parse_seg_number(rebuilt_name)
                     # Try to regex cable size next to it, e.g. "CHES... 48"
                     size_match = re.search(r'\b(48|96|144|288|432)\b', clean_txt)
