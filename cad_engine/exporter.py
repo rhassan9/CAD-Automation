@@ -277,8 +277,8 @@ class LaborSpanRenderer:
             sp_val = str(span.get('SP', '')).strip()
             item_val = str(span.get('ITEM#', '')).strip()
             
-            # Ignore blind blocks (like those on CROSSING PROFILES) that have no Job Print Page
-            if not sp_val or sp_val.upper() in ['NONE', '0']:
+            # Ignore blind blocks (like those on CROSSING PROFILES) that explicitly have 'NONE' or '0' as SP
+            if sp_val.upper() in ['NONE', '0']:
                 continue
                 
             length_val = str(span.get('LENGTH', '0')).strip()
@@ -304,7 +304,7 @@ class LaborSpanRenderer:
             sp_val = str(span.get('SP', '')).strip()
             
             # Ignore blind blocks (like those on CROSSING PROFILES) that have no Job Print Page
-            if not sp_val or sp_val.upper() in ['NONE', '0']:
+            if sp_val.upper() in ['NONE', '0']:
                 continue
                 
             item_val = str(span.get('ITEM#', '')).strip()
