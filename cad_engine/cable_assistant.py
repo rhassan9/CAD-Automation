@@ -39,6 +39,19 @@ def normalize_callout_name(name: str) -> str:
     return name.replace(',', '.')
 
 
+def clean_mtext(text: str) -> str:
+    """Aggressively strip AutoCAD formatting codes (\\f..., \\P, \\C...) from MTEXT strings."""
+    # Remove formatting blocks: {\\fMicrosoft Sans Serif|b0|i0|c0|p34; ... } -> ...
+    # This regex looks for { ... ; and removes it, but keeps the text after it.
+    # Actually, simpler: MTEXT codes usually look like \\P (newline), \\f...; (font), \\C...; (color).
+    text = text.replace('\\P', ' ')
+    text = re.sub(r'\\f[^;]+;', '', text)
+    text = re.sub(r'\\C\d+;', '', text)
+    text = re.sub(r'[{}]', '', text)
+    return text.strip()
+
+
+
 def parse_seg_number(name: str) -> tuple:
     parts = name.split()
     cable_size = int(parts[-1]) if parts and parts[-1].isdigit() else 999
@@ -80,8 +93,10 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
 
     print("Stage 1/4: Extracting blocks and detecting Job Prefix...")
     
-    # Pre-scan to dynamically determine JOB_PREFIX
+    # Pre-scan to dynamically determine JOB_PREFIX across blocks AND text
     prefixes = []
+    
+    # 1. Check native INSERT blocks
     for entity in msp.query('INSERT'):
         if entity.dxf.layer.upper() == 'CABLE CALLOUT':
             if not getattr(entity, 'attribs', None): continue
@@ -91,9 +106,18 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
             if match:
                 prefixes.append(match.group(1).replace(',', '.'))
                 
+    # 2. Check native MTEXT arrays (specifically for CHST routing)
+    if not prefixes:
+        for entity in msp.query('MTEXT TEXT'):
+            text = entity.text if entity.dxftype() == 'MTEXT' else entity.dxf.text
+            clean = clean_mtext(text).upper()
+            match = re.search(r'[A-Z]+[.\s]*(\d{2}[.,]\d{2})', clean)
+            if match and 'SP-' not in clean and len(clean) < 150:
+                prefixes.append(match.group(1).replace(',', '.'))
+                
     if not prefixes:
         raise CableAssistantError(
-            "CRITICAL: No valid CABLE CALLOUT blocks found with a recognized '[PREFIX].XX.XX' structure.\n"
+            "CRITICAL: No valid CABLE CALLOUT blocks or text found with a recognized '[PREFIX].XX.XX' structure.\n"
             "The Cable Sheet cannot compute its dynamically detected Job Prefix and will abort."
         )
         
@@ -147,16 +171,33 @@ def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
         layer = entity.dxf.layer.upper()
         try:
             txt = entity.text if entity.dxftype() == 'MTEXT' else getattr(entity.dxf, 'text', '')
-            txt = txt.strip()
+            clean_txt = clean_mtext(txt)
             x, y = entity.dxf.insert.x, entity.dxf.insert.y
-            if not txt: continue
+            if not clean_txt: continue
+            
+            # Extract MTEXT callouts for boundary framing (Stage 2 part B)
+            if JOB_PREFIX in clean_txt.replace(',', '.'):
+                match = re.search(r'[A-Z]+[.\s]*(\d{2}[.,]\d{2}[.,]\d{2,3})', clean_txt)
+                if match:
+                    # Dynamically rebuild strict callout naming form
+                    rebuilt_name = f"{JOB_PREFIX}.{match.group(1)}".replace(',', '.')
+                    sort_key = parse_seg_number(rebuilt_name)
+                    # Try to regex cable size next to it, e.g. "CHES... 48"
+                    size_match = re.search(r'\b(48|96|144|288|432)\b', clean_txt)
+                    cable_size_str = size_match.group(1) if size_match else 'UNK'
+                    
+                    callouts.append({
+                        'name': rebuilt_name, 'cable_size': cable_size_str,
+                        'sort_key': sort_key, 'x': x, 'y': y
+                    })
+
             if layer == 'ADDRESSES':
-                house_numbers.append((txt, x, y))
+                house_numbers.append((clean_txt, x, y))
             elif layer == 'ROAD NAMES':
-                road_names.append((txt, x, y))
+                road_names.append((clean_txt, x, y))
             elif 'BORE' in layer or 'DIREC' in layer:
-                if re.match(r'^[A-Z]-[A-Z]\s+\d+', txt):
-                    bore_labels.append({'label': txt.replace("'","").strip(), 'x': x, 'y': y})
+                if re.match(r'^[A-Z]-[A-Z]\s+\d+', clean_txt):
+                    bore_labels.append({'label': clean_txt.replace("'","").strip(), 'x': x, 'y': y})
         except:
             pass
 

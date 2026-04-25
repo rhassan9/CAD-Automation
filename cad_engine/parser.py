@@ -3,6 +3,15 @@ import math
 import ezdxf
 from cad_engine.errors import CADWarningInfo
 
+def clean_mtext(text: str) -> str:
+    """Aggressively strip AutoCAD formatting codes (\\f..., \\P, \\C...) from MTEXT strings."""
+    if not text: return ""
+    text = text.replace('\\P', ' ')
+    text = re.sub(r'\\f[^;]+;', '', text)
+    text = re.sub(r'\\C\d+;', '', text)
+    text = re.sub(r'[{}]', '', text)
+    return text.strip()
+
 class DXFParser:
     def __init__(self, filepath):
         self.filepath = filepath
@@ -72,6 +81,8 @@ class DXFParser:
                 # Capture physics for potential Aerial routing
                 attribs['CAD_LAYER'] = entity.dxf.layer
                 attribs['CAD_COLOR'] = entity.dxf.color
+                attribs['X'] = entity.dxf.insert.x
+                attribs['Y'] = entity.dxf.insert.y
                 self.data['labor_spans'].append(attribs)
                 
             fiber_co = attribs.get('FIBER_CO', '').strip().upper()
@@ -132,6 +143,45 @@ class DXFParser:
                         'X': entity.dxf.insert.x,
                         'Y': entity.dxf.insert.y
                     })
+
+        # --- NATIVE MTEXT & GEOGRAPHIC SP EXTRACTION ---
+        sp_anchors = []
+        for entity in self.msp.query('MTEXT TEXT'):
+            text = entity.text if entity.dxftype() == 'MTEXT' else entity.dxf.text
+            clean = clean_mtext(text).upper()
+            
+            if not clean: continue
+                
+            # 1. Harvest native MTEXT Cable Callouts (CHES format)
+            match = re.search(r'[A-Z]+[.\s]*(\d{2}[.,]\d{2})', clean)
+            if match and 'SP-' not in clean and len(clean) < 150:
+                self.callouts.append({'text': clean, 'x': entity.dxf.insert.x, 'y': entity.dxf.insert.y})
+                
+            # 2. Harvest SP Print Page locations
+            sp_match = re.search(r'SP-(\d+)', clean)
+            if sp_match:
+                sp_anchors.append({'sp': sp_match.group(1), 'x': entity.dxf.insert.x, 'y': entity.dxf.insert.y})
+                
+        # --- GEOGRAPHIC SP FALLBACK MAPPING ---
+        # If the draftsman completely omitted the SP field in the Labor block, assign natively by proximity!
+        if sp_anchors:
+            for span in self.data['labor_spans']:
+                sp_val = str(span.get('SP', '')).strip()
+                if not sp_val or sp_val == '0':
+                    # Determine geometric center of block
+                    bx, by = span.get('X', 0), span.get('Y', 0)
+                    
+                    best_sp = None
+                    best_dist = float('inf')
+                    for anchor in sp_anchors:
+                        dist = math.hypot(anchor['x'] - bx, anchor['y'] - by)
+                        if dist < best_dist:
+                            best_dist = dist
+                            best_sp = anchor['sp']
+                            
+                    if best_sp:
+                        span['SP'] = best_sp
+
 
     def _map_geography(self):
         print("Executing geographic segment calculations...")
