@@ -116,50 +116,86 @@ class AppUI(ctk.CTk):
             from cad_engine.cable_assistant import generate_cable_assistant
             from cad_engine.errors import CADExtractionError, CableAssistantError
             import os
-            
+
             dxf_target = self.dxf_path.get()
             out_target = self.output_path.get()
             csv_target = os.path.splitext(out_target)[0] + "_Cable_Sequence.csv"
-            
+
+            # ── STEP 1: Parse DXF once — doc object is shared with cable assistant ──
             parser = DXFParser(dxf_target)
             data = parser.execute()
-            
-            writer = ExcelExporter(out_target, self.template_path.get())
-            writer.populate_house_count(data['house_count'])
-            writer.populate_splices(data['splitters_1x8'])
-            writer.populate_1x4_splits(data['splitters_1x8'])
-            writer.populate_cable_sheet(data)
-            writer.populate_labor_span(data.get('labor_spans', []))
-            writer.save()
-            
-            # Sub-execution for Python-native Cable Sheet
-            generate_cable_assistant(dxf_target, csv_target)
-            
+
+            # ── STEP 2: Run Excel export + Cable CSV in parallel ──────────────────
+            excel_errors  = []
+            cable_errors  = []
+            cable_skipped = [None]
+
+            def _run_excel():
+                try:
+                    writer = ExcelExporter(out_target, self.template_path.get())
+                    writer.populate_house_count(data['house_count'])
+                    writer.populate_splices(data['splitters_1x8'])
+                    writer.populate_1x4_splits(data['splitters_1x8'])
+                    writer.populate_cable_sheet(data)
+                    writer.populate_labor_span(data.get('labor_spans', []))
+                    writer.save()
+                except Exception as exc:
+                    excel_errors.append(exc)
+
+            def _run_cable():
+                try:
+                    # Pass the already-loaded doc — avoids reading the DXF a second time
+                    generate_cable_assistant(dxf_target, csv_target, preloaded_doc=parser.doc)
+                except CableAssistantError as cae:
+                    cable_skipped[0] = str(cae)
+                except Exception as exc:
+                    cable_errors.append(exc)
+
+            t_excel = threading.Thread(target=_run_excel, daemon=True)
+            t_cable = threading.Thread(target=_run_cable, daemon=True)
+            t_excel.start()
+            t_cable.start()
+            t_excel.join()
+            t_cable.join()
+
+            # Propagate any hard failures
+            if excel_errors:
+                raise excel_errors[0]
+            if cable_errors:
+                raise cable_errors[0]
+
+            # ── STEP 3: Build result message ──────────────────────────────────────
             warning_text = ""
+            if cable_skipped[0]:
+                warning_text += f"\n\n⚠️ CABLE SEQUENCE SKIPPED:\n- {cable_skipped[0]}"
             if parser.warnings:
-                warning_text = "\n\n⚠️ NON-FATAL WARNINGS:\n"
+                warning_text += "\n\n⚠️ NON-FATAL WARNINGS:\n"
                 for w in parser.warnings:
                     warning_text += f"- [{w.sheet_affected}] {w.message}\n"
-            
-            self.after(0, lambda: self.status_var.set("Status: Mapping Completed (Check Warnings)" if parser.warnings else "Status: Success!"))
-            self.after(0, lambda: messagebox.showinfo("Extraction Completed", f"Topology mapped securely. Final output:\n\n1. Labor & Splicing: {os.path.basename(out_target)}\n2. Cable: {os.path.basename(csv_target)}{warning_text}"))
-            
-        except CableAssistantError as cae:
-            warning_text = f"\n\n⚠️ CABLE SEQUENCE SKIPPED:\n- {str(cae)}"
-            if parser.warnings:
-                warning_text += "\n\n⚠️ NON-FATAL EXCEL WARNINGS:\n"
-                for w in parser.warnings:
-                    warning_text += f"- [{w.sheet_affected}] {w.message}\n"
-            self.after(0, lambda: self.status_var.set("Status: Mapping Completed (Check Warnings)"))
-            self.after(0, lambda wt=warning_text: messagebox.showinfo("Extraction Completed", f"Topology mapped securely. Final output:\n\n1. Labor & Splicing: {os.path.basename(out_target)}\n2. Cable: Not Generated{wt}"))
-            
+
+            cable_label = os.path.basename(csv_target) if not cable_skipped[0] else 'Not Generated'
+            status = "Status: Mapping Completed (Check Warnings)" if (parser.warnings or cable_skipped[0]) else "Status: Success!"
+            self.after(0, lambda: self.status_var.set(status))
+            self.after(0, lambda wt=warning_text, cl=cable_label: messagebox.showinfo(
+                "Extraction Completed",
+                f"Topology mapped securely. Final output:\n\n"
+                f"1. Labor & Splicing: {os.path.basename(out_target)}\n"
+                f"2. Cable: {cl}{wt}"
+            ))
+
         except CADExtractionError as ce:
             err_msg = str(ce)
             self.after(0, lambda: self.status_var.set("Status: Extraction Aborted (Data Issue)"))
-            self.after(0, lambda m=err_msg: messagebox.showwarning("Extraction Fault", f"Data extraction aborted natively:\n\n{m}\n\nPlease verify the integrity of the selected DXF file."))
+            self.after(0, lambda m=err_msg: messagebox.showwarning(
+                "Extraction Fault",
+                f"Data extraction aborted natively:\n\n{m}\n\nPlease verify the integrity of the selected DXF file."
+            ))
         except Exception as e:
             sys_err = str(e)
             self.after(0, lambda: self.status_var.set("Status: System Exception Encountered!"))
-            self.after(0, lambda m=sys_err: messagebox.showerror("Execution Fault", f"An internal exception occurred during mapping:\n{m}"))
+            self.after(0, lambda m=sys_err: messagebox.showerror(
+                "Execution Fault",
+                f"An internal exception occurred during mapping:\n{m}"
+            ))
         finally:
             self.after(0, lambda: self.run_btn.configure(state="normal"))

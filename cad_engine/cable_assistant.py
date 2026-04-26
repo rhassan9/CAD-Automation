@@ -70,14 +70,18 @@ def build_full_address(bx, by, house_numbers, road_names):
     return num_str or road_str or '(not found)'
 
 
-def generate_cable_assistant(dxf_filepath: str, output_csv_path: str):
+def generate_cable_assistant(dxf_filepath: str, output_csv_path: str, preloaded_doc=None):
     print(f"\n{'='*60}")
     print(f"  Cable Sheet Manual Extraction Assistant")
     print(f"  Loading: {dxf_filepath}")
     print(f"{'='*60}")
 
     try:
-        doc = ezdxf.readfile(dxf_filepath)
+        # Accept a pre-loaded doc to avoid reading the DXF file twice (major perf win)
+        if preloaded_doc is not None:
+            doc = preloaded_doc
+        else:
+            doc = ezdxf.readfile(dxf_filepath)
         msp = doc.modelspace()
     except Exception as e:
         print(f"ERROR: {e}")
