@@ -12,6 +12,62 @@ def clean_mtext(text: str) -> str:
     text = re.sub(r'[{}]', '', text)
     return text.strip()
 
+
+def normalize_splitter_name(raw: str) -> str | None:
+    """
+    Reconstruct a canonical splitter name from messy draftsman input.
+    
+    Valid canonical form: OLT##_###P_LOCATION  (e.g. OLT02_121P_CHESVA)
+    
+    Handles these human errors:
+      - Missing 'P' suffix:        OLT02_121_CHESVA   → OLT02_121P_CHESVA
+      - Missing underscores:       OLT02 121P CHESVA  → OLT02_121P_CHESVA
+      - Dashes instead of _:       OLT02-121P-CHESVA  → OLT02_121P_CHESVA
+      - Extra whitespace:          OLT02_ 121P _CHESVA→ OLT02_121P_CHESVA
+      - Lowercase:                 olt02_121p_chesva  → OLT02_121P_CHESVA
+      - Mixed separators:          OLT02 121P-CHESVA  → OLT02_121P_CHESVA
+      - No separators at all:      OLT02121PCHESVA    → OLT02_121P_CHESVA
+    
+    Returns None for genuine garbage that lacks the 3 required structural
+    components (OLT prefix, placement digits, location suffix):
+      - OLT#, OLT 02, OLT02  (template placeholders / bare prefixes)
+    """
+    # Step 1: Uppercase and strip
+    s = raw.strip().upper()
+    
+    # Step 2: Normalize all separators to underscores
+    s = s.replace('-', '_')       # dashes → underscores
+    s = re.sub(r'\s+', '_', s)    # whitespace → underscores
+    s = re.sub(r'_+', '_', s)     # collapse multiple underscores
+    s = s.strip('_')
+    
+    # Step 3: Try to extract the 3 structural components
+    # Pattern: OLT{nn} ... {digits}[P] ... {alpha location}
+    # We try increasingly relaxed patterns
+    
+    # Attempt A: Already has underscores in the right places
+    m = re.match(r'(OLT\d+)_(\d+)P?_([\w]+)', s)
+    if m:
+        olt_prefix, placement, location = m.group(1), m.group(2), m.group(3)
+        return f"{olt_prefix}_{placement}P_{location}"
+    
+    # Attempt B: No underscores at all (e.g. OLT02121PCHESVA or OLT02121CHESVA)
+    m = re.match(r'(OLT\d{2})(\d{1,4})P?([A-Z]{3,})', s)
+    if m:
+        olt_prefix, placement, location = m.group(1), m.group(2), m.group(3)
+        return f"{olt_prefix}_{placement}P_{location}"
+    
+    # Attempt C: Partial underscores (e.g. OLT02_121CHESVA or OLT02121P_CHESVA)
+    m = re.match(r'(OLT\d{2})_?(\d{1,4})P?_?([\w]{3,})', s)
+    if m:
+        olt_prefix, placement, location = m.group(1), m.group(2), m.group(3)
+        # Make sure location isn't just more digits (that would be garbage)
+        if re.search(r'[A-Z]', location):
+            return f"{olt_prefix}_{placement}P_{location}"
+    
+    # Could not extract valid components → genuine garbage
+    return None
+
 class DXFParser:
     def __init__(self, filepath):
         self.filepath = filepath
@@ -105,19 +161,14 @@ class DXFParser:
                 if len(parts) > 1:
                     base_name = parts[1].strip()
                     
-                    # --- GARBAGE FILTER ---
-                    # Reject template placeholders that have no real splitter identity
-                    # e.g. "OLT#", "OLT 02", "OLT02" (bare prefixes with no placement number)
-                    if not re.search(r'OLT\d+_\d+', base_name):
+                    # --- NORMALIZE & VALIDATE ---
+                    # Handles human typos: missing P, missing underscores, extra spaces,
+                    # dashes instead of underscores, lowercase, etc.
+                    # Returns None for genuine garbage (template placeholders like OLT#, OLT 02)
+                    normalized = normalize_splitter_name(base_name)
+                    if normalized is None:
                         continue
-                    
-                    # --- NORMALIZATION: Fix missing 'P' suffix ---
-                    # e.g. "OLT02_121_CHESVA" → "OLT02_121P_CHESVA"
-                    if re.search(r'_(\d+)_', base_name) and not re.search(r'_(\d+)P_', base_name):
-                        base_name = re.sub(r'_(\d+)_', r'_\1P_', base_name)
-                    
-                    # --- NORMALIZATION: Collapse extra whitespace ---
-                    base_name = re.sub(r'\s+', '', base_name)
+                    base_name = normalized
                     
                     match = re.search(r'_(\d+)P_', base_name)
                     if match:
