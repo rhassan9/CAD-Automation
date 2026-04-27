@@ -104,6 +104,21 @@ class DXFParser:
                 parts = splitter_tag.split('1X8 SPLITTER ')
                 if len(parts) > 1:
                     base_name = parts[1].strip()
+                    
+                    # --- GARBAGE FILTER ---
+                    # Reject template placeholders that have no real splitter identity
+                    # e.g. "OLT#", "OLT 02", "OLT02" (bare prefixes with no placement number)
+                    if not re.search(r'OLT\d+_\d+', base_name):
+                        continue
+                    
+                    # --- NORMALIZATION: Fix missing 'P' suffix ---
+                    # e.g. "OLT02_121_CHESVA" → "OLT02_121P_CHESVA"
+                    if re.search(r'_(\d+)_', base_name) and not re.search(r'_(\d+)P_', base_name):
+                        base_name = re.sub(r'_(\d+)_', r'_\1P_', base_name)
+                    
+                    # --- NORMALIZATION: Collapse extra whitespace ---
+                    base_name = re.sub(r'\s+', '', base_name)
+                    
                     match = re.search(r'_(\d+)P_', base_name)
                     if match:
                         placement_no = match.group(1)
