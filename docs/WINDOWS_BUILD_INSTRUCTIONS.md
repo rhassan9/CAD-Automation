@@ -25,7 +25,7 @@ venv\Scripts\activate
 ## Step 2: Install Required Libraries
 With your virtual environment active, install precisely the dependencies required by the application:
 ```cmd
-pip install ezdxf openpyxl customtkinter pillow pyinstaller
+pip install -r requirements.txt pyinstaller
 ```
 
 ## Step 3: Build the `.exe` File
@@ -48,4 +48,4 @@ Once the bundling completes successfully:
 2. Open the `CAD Extraction Engine/` folder.
 3. Your application is the `CAD Extraction Engine.exe` file inside.
 
-You can now zip the entire `CAD Extraction Engine` folder and send it to your client!
+Zip the entire `CAD Extraction Engine` folder to distribute it. End users need nothing else installed.

@@ -1,8 +1,24 @@
-.venv/
+# Python
 __pycache__/
-~
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# PyInstaller build output
+build/
+dist/
+*.spec
+
+# Client input/output files are proprietary and never committed
+*.dxf
+*.dwg
+*.xlsx
+*.csv
+# ...except synthetic sample data, if added
+!samples/**
+
+# OS / editor
 .DS_Store
-temp.xlsx
-temp3.xlsx
-1_3_CX_04.02.2026.dxf
-qc_temp_docx
+~*

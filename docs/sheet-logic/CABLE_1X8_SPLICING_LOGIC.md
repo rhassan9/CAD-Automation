@@ -11,7 +11,7 @@ This sheet acts as the primary index for the 1x8 splitters. Every splitter extra
 | **C** | **Color 2** | Secondary pre-assigned fiber color code. To be recorded/preserved during mapping. |
 | **D** | **EXTRACTED #** | The space where we write the `placement_no` to confirm the alignment. |
 | **E** | **ADDRESS** | The `placement_address` extracted from the CAD block. |
-| **F** | **1X8 SPLITTER NAME** | The `base_1x8_name` (e.g., `OLT01_106P_FQVRNC`). |
+| **F** | **1X8 SPLITTER NAME** | The `base_1x8_name` (e.g., `OLT01_106P_ANYTWN`). |
 | **G - N** | **PORT 1 - 8** | The specific port associations or the string "SPARE" if unused. |
 
 ## 3. The Extraction & Mapping Workflow

@@ -1,0 +1,5 @@
+# Runtime dependencies (tested on Python 3.12; requires Python 3.10+)
+ezdxf>=1.4,<2
+openpyxl>=3.1,<4
+customtkinter>=5.2,<6
+Pillow>=10
