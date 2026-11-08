@@ -31,9 +31,9 @@ Tables jump by **5 columns** horizontally.
 | **B9** | `SEG 1` | Label (Static) | N/A |
 | **C9:E9** | Method | Merged. Dropdown value: `New Conduit`, `Aerial`, or `Existing Conduit`. | **V5 Color Rule:** Blue/Brown = `Aerial`, Red = `New Conduit`, Black/Gray = `Existing Conduit`. (Spelling must be exact). |
 | **B10** | `START` | Label (Static) | N/A |
-| **C10:E10** | Start Address | Merged. e.g., `6913 OLD MILLS RD` | Geographically calculated nearest `NOTES_1_FULL_ADDRESS` to the first coordinate of the segment. |
+| **C10:E10** | Start Address | Merged. e.g., `123 MAPLE ST` | Geographically calculated nearest `NOTES_1_FULL_ADDRESS` to the first coordinate of the segment. |
 | **B11** | `END` | Label (Static) | N/A |
-| **C11:E11** | End Address | Merged. e.g., `4700 BENTCREEK DR` | Geographically calculated nearest `NOTES_1_FULL_ADDRESS` to the final coordinate of the segment. |
+| **C11:E11** | End Address | Merged. e.g., `456 OAK DR` | Geographically calculated nearest `NOTES_1_FULL_ADDRESS` to the final coordinate of the segment. |
 | **B12** | `CABLE SIZE` | Label (Static) | N/A |
 | **C12:E13** | Cable Count | Merged. Dropdown value: e.g., `48`. | Extracted exclusively from the `CABLE CALLOUT` text (See Section 2). |
 | **B13** | `TOTAL` | Label (Static) | N/A |

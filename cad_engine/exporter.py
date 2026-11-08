@@ -6,6 +6,14 @@ import copy
 import re
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
+# This build targets a single fixed service area, so the deliverable's
+# City/State/Zip columns are written as constants rather than parsed from
+# the DXF. A multi-area rollout would turn these into a config value or a
+# per-job input instead of hardcoding one area here.
+SERVICE_AREA_CITY = "ANYTOWN"
+SERVICE_AREA_STATE = "SAMPLE STATE"
+SERVICE_AREA_ZIP = "00000"
+
 class HouseCountRenderer:
     def populate_house_count(self, house_data):
         print("Populating House Count sheet...")
@@ -34,9 +42,9 @@ class HouseCountRenderer:
             target_border = thick_bottom_border if is_12th_row else standard_border
             
             sheet.cell(row=row, column=1).value = data['ADDRESS']
-            sheet.cell(row=row, column=2).value = "FUQUAY-VARINA"
-            sheet.cell(row=row, column=3).value = "NORTH CAROLINA"
-            sheet.cell(row=row, column=4).value = "27526"
+            sheet.cell(row=row, column=2).value = SERVICE_AREA_CITY
+            sheet.cell(row=row, column=3).value = SERVICE_AREA_STATE
+            sheet.cell(row=row, column=4).value = SERVICE_AREA_ZIP
             sheet.cell(row=row, column=5).value = data.get('UNIT', '')
             sheet.cell(row=row, column=6).value = "RES-SFU"
             sheet.cell(row=row, column=7).value = "BURIED"

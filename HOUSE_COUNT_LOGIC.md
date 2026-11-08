@@ -14,10 +14,10 @@ The script extracts every unique address found in the `SPLICING 1X8 TO 1X4 SPLIT
 ## 2. Column Mapping (A through K)
 | Col | Name | Value / Source |
 | :--- | :--- | :--- |
-| **A** | **FULL ADDRESS** | Extracted Address (e.g. `4700 BENTCREEK DR`) |
-| **B** | **CITY** | `FUQUAY-VARINA` |
-| **C** | **STATE** | `NORTH CAROLINA` |
-| **D** | **ZIP CODE** | `27526` |
+| **A** | **FULL ADDRESS** | Extracted Address (e.g. `456 OAK DR`) |
+| **B** | **CITY** | `ANYTOWN` (fixed per service area) |
+| **C** | **STATE** | `SAMPLE STATE` (fixed per service area) |
+| **D** | **ZIP CODE** | `00000` (fixed per service area) |
 | **E** | **Unit Number** | Extracted from address string (if present) |
 | **F** | **HOUSE TYPE** | `RES-SFU` |
 | **G** | **Drop Type** | `BURIED` |

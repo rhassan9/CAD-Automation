@@ -19,7 +19,7 @@ class AppUI(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title("Lumos Data Extraction Engine")
+        self.title("CAD Data Extraction Engine")
         self.geometry("800x600")
         
         try:
@@ -51,7 +51,7 @@ class AppUI(ctk.CTk):
             self.logo_label.pack(pady=(30, 20))
         except Exception as e:
             print(f"Could not load logo: {e}")
-            self.title_label = ctk.CTkLabel(self.main_frame, text="LUMOS AUTOMATION ENGINE", font=ctk.CTkFont(size=24, weight="bold"))
+            self.title_label = ctk.CTkLabel(self.main_frame, text="CAD AUTOMATION ENGINE", font=ctk.CTkFont(size=24, weight="bold"))
             self.title_label.pack(pady=(30, 20))
 
         self.dxf_path = ctk.StringVar()

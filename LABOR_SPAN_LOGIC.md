@@ -32,7 +32,7 @@ The raw dictionary objects extracted from the CAD must be sequentially sorted to
 
 ### D. NON-STANDARD CONDUIT SIZE
 * **Source:** The `COND_SZ` attribute parameter.
-* **Logic:** Allow standard Lumos conduit sizes (e.g., 1.25, 2, 4). Extract the numerical value and dynamically append an inch mark (`"`) if the raw CAD data does not already include it. If the CAD field is left blank, or says '0' or 'NONE', leave the cell blank (Strict Extraction).
+* **Logic:** Allow the client's standard conduit sizes (e.g., 1.25, 2, 4). Extract the numerical value and dynamically append an inch mark (`"`) if the raw CAD data does not already include it. If the CAD field is left blank, or says '0' or 'NONE', leave the cell blank (Strict Extraction).
 
 ### E. IS THIS A PARALLELING DROP CONDUIT?
 * **Source:** The `DROP_FLG` attribute parameter.
@@ -50,4 +50,4 @@ These columns break down the true physical volume to ensure precise per-unit bil
 
 ## Aerial Routing Designation (Columns J - O)
 **Visual Hierarchy Resolution:** Aerial vs. Buried implementations are not explicitly defined by text attributes within the `MODELITEM` block. Instead, the parser must evaluate the fundamental CAD physics (Layer and Color) of the line associated with the span.
-* Per Lumos V5 drafting standards: If the associated CAD Color is **Blue** (Aerial) or **Brown** (Strand), the data must be routed to the Aerial columns. If the CAD Color is **Red** (Underground), it defaults to the Buried conduit columns.
+* Per the client's drafting standard: If the associated CAD Color is **Blue** (Aerial) or **Brown** (Strand), the data must be routed to the Aerial columns. If the CAD Color is **Red** (Underground), it defaults to the Buried conduit columns.
