@@ -10,6 +10,10 @@ Built as freelance work for a fiber-to-the-home (FTTH) design contractor. Before
 
 ## What it does
 
+![A fiber network design drawing in AutoCAD, split into print pages SP-1 to SP-5](docs/screenshots/autocad-design-drawing.jpeg)
+
+*The input: a fiber network design drawing (test data). Every splitter, span and address label on it is a CAD block or text entity the engine reads. The `SP-#` regions are the job's print pages, which the labor span sheet is sorted by.*
+
 You pick three files in the GUI: a **DXF drawing**, the client's **Excel template**, and an **output path**. The engine then:
 
 1. Parses every block, attribute and text entity in the drawing with `ezdxf`.
