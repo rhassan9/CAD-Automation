@@ -2,7 +2,7 @@
 
 A Windows desktop tool that reads fiber-optic network design drawings (AutoCAD `.dxf`) and fills in the client's multi-sheet Excel construction workbook automatically: splitter splicing tables, house counts, and labor span sheets.
 
-Built as freelance work for a fiber-to-the-home (FTTH) design contractor. Before this tool, engineers copied the values for every job from the drawing into Excel by hand. That work was slow, and typos went straight into construction paperwork.
+Built as freelance work for a fiber-to-the-home (FTTH) design contractor. Before this tool, engineers copied the values for every job from the drawing into Excel by hand, section by section — about 6-8 hours of manual entry per job, with typos going straight into construction paperwork. The tool reduces that to the seconds it takes to parse the DXF and write the workbook.
 
 > **Note on data:** The client's drawings, Excel template and real outputs are proprietary, so they are not in this repo. The screenshots below show the tool's output on test data.
 
