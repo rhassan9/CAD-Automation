@@ -105,6 +105,10 @@ Materials/                 app icon, logo, background
 |---|---|
 | ![1x8 splitter label as drawn in AutoCAD](docs/screenshots/cad-splitter-label.jpeg) | ![Cable to 1x8 splicing output](docs/screenshots/1x8-splicing-output.jpeg) |
 
+| Material / cost rollup (template-preserved, untouched by the engine) |
+|---|
+| ![Buried splicing material and cost sheet](docs/screenshots/material-sheet.jpeg) |
+
 ## Running it
 
 Requires Python 3.10+.
